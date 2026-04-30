@@ -1,9 +1,4 @@
-export type StatusMesa = "livre" | "ocupada" | "fechando";
+import type { Table, TableStatus } from "@prisma/client";
 
-export interface Mesa {
-  id: string;
-  numero: number;
-  capacidade: number;
-  status: StatusMesa;
-  pedidoAbertoId?: string;
-}
+export type Mesa = Table;
+export type StatusMesa = TableStatus;

@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: villamill-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: villamill
+    ports:
+      - "5432:5432"
+    volumes:
+      - villamill_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  villamill_pgdata:

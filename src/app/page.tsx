@@ -1,54 +1,111 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { prisma } from "@/services/prisma";
 
-export default function Home() {
+async function getStats() {
+  const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const inicioDia = new Date(`${hoje}T03:00:00.000Z`);
+  const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+  const [mesasAbertas, alertasEstoque, vendasHoje] = await Promise.all([
+    prisma.order.count({ where: { paymentStatus: "PENDENTE" } }),
+    prisma.ingredient.count({
+      where: { quantidadeAtual: { lte: prisma.ingredient.fields.nivelMinimoAlerta } },
+    }),
+    prisma.order.aggregate({
+      where: { paymentStatus: "PAGO", closedAt: { gte: inicioDia, lte: fimDia } },
+      _sum: { total: true },
+      _count: true,
+    }),
+  ]);
+
+  return { mesasAbertas, alertasEstoque, vendasHoje };
+}
+
+const modules = [
+  {
+    href: "/mesas",
+    title: "Mesas",
+    desc: "Abra mesas, lance pedidos e feche contas com forma de pagamento.",
+    color: "bg-red-600",
+    symbol: "🪑",
+  },
+  {
+    href: "/produtos",
+    title: "Cardápio",
+    desc: "Gerencie produtos, preços, categorias e fichas técnicas.",
+    color: "bg-yellow-500",
+    symbol: "🥩",
+  },
+  {
+    href: "/estoque",
+    title: "Estoque",
+    desc: "Controle insumos, registre entradas e veja alertas de nível mínimo.",
+    color: "bg-emerald-600",
+    symbol: "📦",
+  },
+  {
+    href: "/financeiro",
+    title: "Financeiro",
+    desc: "Relatório diário de vendas por forma de pagamento e ticket médio.",
+    color: "bg-blue-600",
+    symbol: "📊",
+  },
+];
+
+export default async function Home() {
+  const { mesasAbertas, vendasHoje } = await getStats();
+
+  const faturamento = Number(vendasHoje._sum.total ?? 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-6 py-12">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Villa Mill Tambore</h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Base inicial do sistema de PDV e Gestao do restaurante.
-        </p>
-      </header>
+    <main className="mx-auto w-full max-w-5xl px-6 py-10">
+      {/* Hero */}
+      <div className="mb-10 flex flex-col items-center gap-4 text-center">
+        <Image src="/logo.png" alt="Villa Mill Tamboré" width={100} height={100} className="rounded-full shadow-lg" />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Villa Mill Tamboré</h1>
+          <p className="mt-1 text-slate-500">Sistema de gestão e PDV</p>
+        </div>
+      </div>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Mesas</CardTitle>
-            <CardDescription>Controle de ocupacao e pedidos em andamento.</CardDescription>
-          </CardHeader>
-          <Link href="/mesas">
-            <Button variant="outline" className="mt-4 w-full">
-              Acessar modulo
-            </Button>
-          </Link>
-        </Card>
+      {/* Indicadores rápidos */}
+      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mesas abertas</p>
+          <p className={`mt-1 text-3xl font-bold ${mesasAbertas > 0 ? "text-amber-600" : "text-slate-800"}`}>
+            {mesasAbertas}
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Faturamento hoje</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{faturamento}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 col-span-2 md:col-span-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pedidos fechados</p>
+          <p className="mt-1 text-3xl font-bold text-slate-800">{vendasHoje._count}</p>
+        </div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Estoque</CardTitle>
-            <CardDescription>Gestao de insumos e niveis minimos por item.</CardDescription>
-          </CardHeader>
-          <Link href="/estoque">
-            <Button variant="outline" className="mt-4 w-full">
-              Acessar modulo
-            </Button>
+      {/* Módulos */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {modules.map((mod) => (
+          <Link
+            key={mod.href}
+            href={mod.href}
+            className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-2xl ${mod.color}`}>
+              {mod.symbol}
+            </div>
+            <h2 className="font-bold text-slate-900 group-hover:text-[#CC1111] transition-colors">{mod.title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{mod.desc}</p>
           </Link>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Financeiro</CardTitle>
-            <CardDescription>Resumo de caixa, vendas e indicadores diarios.</CardDescription>
-          </CardHeader>
-          <Link href="/financeiro">
-            <Button variant="outline" className="mt-4 w-full">
-              Acessar modulo
-            </Button>
-          </Link>
-        </Card>
-      </section>
+        ))}
+      </div>
     </main>
   );
 }

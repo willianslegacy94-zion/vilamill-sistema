@@ -1,0 +1,65 @@
+﻿Proposta de Modernização e Gestão Digital
+Cliente: Villa Mill Tamboré
+Responsável: Willians
+________________
+
+
+1. O Objetivo
+Transformar a operação do Villa Mill de um modelo baseado em comandas manuais para um Sistema de Gestão Digital Integrado. O foco é eliminar erros humanos, evitar perdas de estoque e garantir que o proprietário tenha controle total sobre o faturamento, mesmo à distância.
+________________
+
+
+2. O que vamos resolver?
+* Fim dos erros de conta: Eliminação de letras ilegíveis e cálculos errados que geram prejuízo no fechamento.
+* Controle de Estoque Real: O sistema avisa quando produtos (como carnes e bebidas) estão acabando, evitando a falta de itens para o cliente.
+* Prevenção de Perdas: Registro de todos os cancelamentos e descontos, garantindo que tudo o que sai da cozinha seja pago.
+* Agilidade: O garçom não precisa mais fazer contas de cabeça ou perder tempo conferindo papéis no final da noite.
+________________
+
+
+3. O que estamos entregando?
+🖥️ Frente de Caixa Inteligente (PDV)
+* Visualização clara de todas as mesas (Livre, Ocupada ou Pedindo a conta).
+* Registro rápido de pedidos e fechamento de conta em segundos.
+* Impressão automática de pedidos direto para o bar ou churrasqueira.
+🥩 Gestão de Estoque e Insumos
+* Baixa automática de ingredientes (ex: ao vender um espetinho, o sistema abate o peso exato da carne no estoque).
+* Alertas Inteligentes: Notificações na tela quando o estoque atinge um nível crítico.
+📊 Painel do Proprietário e Financeiro
+* Relatório diário de vendas (quanto entrou em dinheiro, cartão ou Pix).
+* Controle de acessos: você define quem pode dar descontos ou cancelar pedidos.
+* Acesso aos números do restaurante de qualquer lugar via internet.
+________________
+
+
+4. Cronograma de Implementação
+O desenvolvimento será dividido em etapas para garantir uma adaptação tranquila da equipe:
+1. Etapa 1 (Vendas): Instalação do Mapa de Mesas e Registro de Pedidos.
+2. Etapa 2 (Segurança): Configuração de níveis de acesso e relatórios financeiros.
+3. Etapa 3 (Estoque): Ativação da Ficha Técnica e Alertas de compra.
+4. Etapa 4 (Treinamento): Acompanhamento presencial para garantir que todos saibam usar.
+________________
+
+
+5. Investimento
+Item
+	Descrição
+	Valor
+	Desenvolvimento e Setup
+	Criação, personalização e instalação do sistema.
+	R$ 3.600,00
+	Suporte e Manutenção
+	Hospedagem em nuvem, atualizações e suporte técnico.
+	R$ 400,00 /mês
+	Nota: O valor de desenvolvimento pode ser parcelado conforme o avanço das etapas.
+________________
+
+
+6. Por que este sistema?
+Diferente de softwares "de prateleira", esta solução está sendo construída especificamente para o fluxo de trabalho do Villa Mill. Você terá um suporte direto, sem filas de espera, e um sistema que cresce conforme a necessidade do seu negócio.
+________________
+
+
+Willians Santana
+Desenvolvedor & Consultor de Gestão
+(11) 95407-9335

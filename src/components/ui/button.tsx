@@ -5,18 +5,14 @@ import { cn } from "@/lib/utils";
 
 type ButtonVariant = "default" | "outline" | "ghost";
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  default:
-    "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200",
-  outline:
-    "border border-slate-300 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
-  ghost:
-    "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800",
+  default:  "bg-[#CC1111] text-white hover:bg-red-700",
+  outline:  "border border-slate-300 bg-white text-slate-900 hover:bg-slate-100",
+  ghost:    "text-slate-700 hover:bg-slate-100",
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

@@ -1,8 +1,4 @@
-export interface Insumo {
-  id: string;
-  nome: string;
-  unidadeMedida: "kg" | "g" | "l" | "ml" | "un";
-  quantidadeAtual: number;
-  estoqueMinimo: number;
-  custoMedio: number;
-}
+import type { Ingredient, IngredientUnit } from "@prisma/client";
+
+export type Insumo = Ingredient;
+export type UnidadeInsumo = IngredientUnit;

@@ -18,6 +18,12 @@ enum PaymentStatus {
   PAGO
 }
 
+enum FormaPagamento {
+  DINHEIRO
+  CARTAO
+  PIX
+}
+
 enum UserRole {
   ADMIN
   CAIXA
@@ -42,6 +48,7 @@ model Product {
   preco       Decimal      @db.Decimal(10, 2)
   categoria   String
   recipeItems RecipeItem[]
+  orderItems  OrderItem[]
 }
 
 model Ingredient {
@@ -69,7 +76,24 @@ model Order {
   mesaId        String
   paymentStatus PaymentStatus @default(PENDENTE)
   total         Decimal       @db.Decimal(10, 2)
-  table         Table         @relation(fields: [mesaId], references: [id], onDelete: Restrict)
+  createdAt      DateTime        @default(now())
+  closedAt       DateTime?
+  formaPagamento FormaPagamento?
+  table          Table           @relation(fields: [mesaId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  productId  String
+  quantidade Decimal  @db.Decimal(10, 3)
+  precoUnit  Decimal  @db.Decimal(10, 2)
+  subtotal   Decimal  @db.Decimal(10, 2)
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId])
 }
 
 model User {
