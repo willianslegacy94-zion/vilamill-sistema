@@ -63,11 +63,13 @@ export default async function Home() {
             {mesasAbertas}
           </p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Faturamento hoje</p>
-          <p className="mt-1 text-2xl font-bold text-green-600">{faturamento}</p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 col-span-2 md:col-span-1">
+        {isAdmin && (
+          <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Faturamento hoje</p>
+            <p className="mt-1 text-2xl font-bold text-green-600">{faturamento}</p>
+          </div>
+        )}
+        <div className={`rounded-xl border border-slate-200 bg-white px-5 py-4 ${!isAdmin ? "col-span-1" : "col-span-2 md:col-span-1"}`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pedidos fechados</p>
           <p className="mt-1 text-3xl font-bold text-slate-800">{vendasHoje._count}</p>
         </div>

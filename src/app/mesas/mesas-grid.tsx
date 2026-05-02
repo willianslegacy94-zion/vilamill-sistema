@@ -122,6 +122,24 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
     ).then(() => { setMesaIdSelecionada(null); setDesconto(0); });
   }
 
+  function fecharELiberar() {
+    if (!pedidoAtivo) return;
+    chamarAPI(() =>
+      fetch(`/api/pedidos/${pedidoAtivo.id}/fechar-e-liberar`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formaPagamento, desconto }),
+      })
+    ).then(() => { setMesaIdSelecionada(null); setDesconto(0); });
+  }
+
+  function liberarMesaEmergencia() {
+    if (!mesaSelecionada) return;
+    chamarAPI(() =>
+      fetch(`/api/mesas/${mesaSelecionada.id}/liberar`, { method: "PATCH" })
+    ).then(() => setMesaIdSelecionada(null));
+  }
+
   function confirmarCancelamento() {
     if (!pedidoAtivo) return;
     setShowCancelModal(false);
@@ -218,13 +236,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
                       </li>
                     ))}
                   </ul>
-                  <button
-                    onClick={() => window.open(`/comanda/${pedidoAtivo.id}?print=true`, "_blank")}
-                    className="w-full rounded-lg border border-slate-300 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    🖨️ Enviar para Cozinha
-                  </button>
-                  </>
+</>
                 )}
 
                 <div className="flex justify-between border-t pt-3 text-base font-bold text-slate-900">
@@ -307,6 +319,22 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
                 >
                   {carregando ? "Fechando..." : "Fechar Conta"}
                 </Button>
+
+                <Button
+                  onClick={fecharELiberar}
+                  disabled={carregando || pedidoAtivo.items.length === 0}
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  {carregando ? "Processando..." : "Fechar e Liberar Mesa"}
+                </Button>
+
+                <button
+                  onClick={liberarMesaEmergencia}
+                  disabled={carregando}
+                  className="w-full rounded-lg border border-amber-300 py-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 disabled:opacity-40"
+                >
+                  Liberar Mesa (emergência)
+                </button>
 
                 <button
                   onClick={() => setShowCancelModal(true)}
