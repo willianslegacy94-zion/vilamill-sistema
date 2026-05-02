@@ -1,17 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
+import { TriangleAlert } from "lucide-react";
 import { prisma } from "@/services/prisma";
+import { auth } from "@/auth";
 
 async function getStats() {
   const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
   const inicioDia = new Date(`${hoje}T03:00:00.000Z`);
   const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-  const [mesasAbertas, alertasEstoque, vendasHoje] = await Promise.all([
+  const [mesasAbertas, todosInsumos, vendasHoje] = await Promise.all([
     prisma.order.count({ where: { paymentStatus: "PENDENTE" } }),
-    prisma.ingredient.count({
-      where: { quantidadeAtual: { lte: prisma.ingredient.fields.nivelMinimoAlerta } },
-    }),
+    prisma.ingredient.findMany({ select: { id: true, nome: true, quantidadeAtual: true, nivelMinimoAlerta: true } }),
     prisma.order.aggregate({
       where: { paymentStatus: "PAGO", closedAt: { gte: inicioDia, lte: fimDia } },
       _sum: { total: true },
@@ -19,42 +19,25 @@ async function getStats() {
     }),
   ]);
 
-  return { mesasAbertas, alertasEstoque, vendasHoje };
+  const insumoCriticos = todosInsumos.filter(
+    (i) => Number(i.quantidadeAtual) <= Number(i.nivelMinimoAlerta)
+  );
+
+  return { mesasAbertas, insumoCriticos, vendasHoje };
 }
 
 const modules = [
-  {
-    href: "/mesas",
-    title: "Mesas",
-    desc: "Abra mesas, lance pedidos e feche contas com forma de pagamento.",
-    color: "bg-red-600",
-    symbol: "🪑",
-  },
-  {
-    href: "/produtos",
-    title: "Cardápio",
-    desc: "Gerencie produtos, preços, categorias e fichas técnicas.",
-    color: "bg-yellow-500",
-    symbol: "🥩",
-  },
-  {
-    href: "/estoque",
-    title: "Estoque",
-    desc: "Controle insumos, registre entradas e veja alertas de nível mínimo.",
-    color: "bg-emerald-600",
-    symbol: "📦",
-  },
-  {
-    href: "/financeiro",
-    title: "Financeiro",
-    desc: "Relatório diário de vendas por forma de pagamento e ticket médio.",
-    color: "bg-blue-600",
-    symbol: "📊",
-  },
+  { href: "/mesas",      title: "Mesas",       desc: "Abra mesas, lance pedidos e feche contas com forma de pagamento.", color: "bg-red-600",     symbol: "🪑", adminOnly: false },
+  { href: "/produtos",   title: "Cardápio",    desc: "Gerencie produtos, preços, categorias e fichas técnicas.",         color: "bg-yellow-500", symbol: "🥩", adminOnly: false },
+  { href: "/estoque",    title: "Estoque",     desc: "Controle insumos, registre entradas e veja alertas de nível mínimo.", color: "bg-emerald-600", symbol: "📦", adminOnly: true },
+  { href: "/financeiro", title: "Financeiro",  desc: "Relatório diário de vendas por forma de pagamento e ticket médio.", color: "bg-blue-600",   symbol: "📊", adminOnly: true },
 ];
 
 export default async function Home() {
-  const { mesasAbertas, vendasHoje } = await getStats();
+  const session = await auth();
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const { mesasAbertas, insumoCriticos, vendasHoje } = await getStats();
+  const visibleModules = modules.filter((m) => !m.adminOnly || isAdmin);
 
   const faturamento = Number(vendasHoje._sum.total ?? 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -90,9 +73,21 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* Alertas de estoque crítico */}
+      {insumoCriticos.length > 0 && (
+        <div className="mb-8 flex flex-col gap-2">
+          {insumoCriticos.map((i) => (
+            <div key={i.id} className="flex items-center gap-3 rounded-xl border border-red-300 bg-red-50 px-5 py-3">
+              <TriangleAlert className="h-5 w-5 shrink-0 text-red-600" />
+              <p className="font-semibold text-red-700">ESTOQUE CRÍTICO: {i.nome}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Módulos */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {modules.map((mod) => (
+        {visibleModules.map((mod) => (
           <Link
             key={mod.href}
             href={mod.href}

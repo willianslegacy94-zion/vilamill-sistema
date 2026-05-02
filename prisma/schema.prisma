@@ -3,8 +3,87 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Table {
+  id     String      @id @default(cuid())
+  numero Int         @unique
+  status TableStatus @default(LIVRE)
+  orders Order[]
+}
+
+model Product {
+  id          String       @id @default(cuid())
+  nome        String
+  preco       Decimal      @db.Decimal(10, 2)
+  categoria   String
+  orderItems  OrderItem[]
+  recipeItems RecipeItem[]
+}
+
+model Ingredient {
+  id                String         @id @default(cuid())
+  nome              String
+  unidade           IngredientUnit
+  quantidadeAtual   Decimal        @db.Decimal(10, 3)
+  nivelMinimoAlerta Decimal        @db.Decimal(10, 3)
+  recipeItems       RecipeItem[]
+}
+
+model RecipeItem {
+  id           String     @id @default(cuid())
+  productId    String
+  ingredientId String
+  quantidade   Decimal    @db.Decimal(10, 3)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+}
+
+model Order {
+  id             String          @id @default(cuid())
+  mesaId         String
+  paymentStatus  PaymentStatus   @default(PENDENTE)
+  total          Decimal         @db.Decimal(10, 2)
+  desconto       Decimal         @db.Decimal(10, 2) @default(0)
+  closedAt       DateTime?
+  createdAt      DateTime        @default(now())
+  formaPagamento FormaPagamento?
+  table          Table           @relation(fields: [mesaId], references: [id])
+  items          OrderItem[]
+}
+
+model CancelamentoLog {
+  id                 String   @id @default(cuid())
+  mesaNumero         Int
+  motivoCancelamento String?
+  canceladoPor       String
+  canceladoEm        DateTime @default(now())
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  productId  String
+  quantidade Decimal @db.Decimal(10, 3)
+  precoUnit  Decimal @db.Decimal(10, 2)
+  subtotal   Decimal @db.Decimal(10, 2)
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  role      UserRole @default(CAIXA)
 }
 
 enum TableStatus {
@@ -33,71 +112,4 @@ enum IngredientUnit {
   KG
   UN
   L
-}
-
-model Table {
-  id     String      @id @default(cuid())
-  numero Int         @unique
-  status TableStatus @default(LIVRE)
-  orders Order[]
-}
-
-model Product {
-  id          String       @id @default(cuid())
-  nome        String
-  preco       Decimal      @db.Decimal(10, 2)
-  categoria   String
-  recipeItems RecipeItem[]
-  orderItems  OrderItem[]
-}
-
-model Ingredient {
-  id               String       @id @default(cuid())
-  nome             String
-  unidade          IngredientUnit
-  quantidadeAtual  Decimal      @db.Decimal(10, 3)
-  nivelMinimoAlerta Decimal     @db.Decimal(10, 3)
-  recipeItems      RecipeItem[]
-}
-
-model RecipeItem {
-  id           String     @id @default(cuid())
-  productId    String
-  ingredientId String
-  quantidade   Decimal    @db.Decimal(10, 3)
-  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
-
-  @@unique([productId, ingredientId])
-}
-
-model Order {
-  id            String        @id @default(cuid())
-  mesaId        String
-  paymentStatus PaymentStatus @default(PENDENTE)
-  total         Decimal       @db.Decimal(10, 2)
-  createdAt      DateTime        @default(now())
-  closedAt       DateTime?
-  formaPagamento FormaPagamento?
-  table          Table           @relation(fields: [mesaId], references: [id], onDelete: Restrict)
-  items         OrderItem[]
-}
-
-model OrderItem {
-  id         String   @id @default(cuid())
-  orderId    String
-  productId  String
-  quantidade Decimal  @db.Decimal(10, 3)
-  precoUnit  Decimal  @db.Decimal(10, 2)
-  subtotal   Decimal  @db.Decimal(10, 2)
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-
-  @@unique([orderId, productId])
-}
-
-model User {
-  id   String   @id @default(cuid())
-  nome String
-  role UserRole @default(CAIXA)
 }

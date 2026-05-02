@@ -1,4 +1,5 @@
 import { PrismaClient, TableStatus } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -42,6 +43,21 @@ async function main() {
       }
     })
   );
+
+  const usuarios = [
+    { nome: "Admin",   email: "admin@villamill.com",   senha: "admin123",   role: "ADMIN"  },
+    { nome: "Emilly",  email: "emilly@villamill.com",  senha: "emilly123",  role: "CAIXA"  },
+    { nome: "Melissa", email: "melissa@villamill.com", senha: "melissa123", role: "CAIXA"  },
+  ] as const;
+
+  for (const u of usuarios) {
+    const senhaHash = await bcrypt.hash(u.senha, 10);
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: {},
+      create: { nome: u.nome, email: u.email, senhaHash, role: u.role },
+    });
+  }
 }
 
 main()

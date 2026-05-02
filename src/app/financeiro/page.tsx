@@ -25,7 +25,7 @@ export default async function FinanceiroPage({
   const inicioDia = new Date(`${dataFiltro}T03:00:00.000Z`);
   const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-  const [pedidosFechados, pedidosAbertos] = await Promise.all([
+  const [pedidosFechados, pedidosAbertos, cancelamentos] = await Promise.all([
     prisma.order.findMany({
       where: { paymentStatus: "PAGO", closedAt: { gte: inicioDia, lte: fimDia } },
       include: { items: { include: { product: true } }, table: true },
@@ -35,6 +35,10 @@ export default async function FinanceiroPage({
       where: { paymentStatus: "PENDENTE" },
       include: { items: { include: { product: true } }, table: true },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.cancelamentoLog.findMany({
+      where: { canceladoEm: { gte: inicioDia, lte: fimDia } },
+      orderBy: { canceladoEm: "desc" },
     }),
   ]);
 
@@ -133,6 +137,35 @@ export default async function FinanceiroPage({
           </div>
         )}
       </section>
+
+      {/* Cancelamentos do dia */}
+      {cancelamentos.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-red-700">Cancelamentos do dia ({cancelamentos.length})</h2>
+          <div className="overflow-hidden rounded-xl border border-red-200">
+            <table className="w-full text-sm">
+              <thead className="bg-red-50 text-xs font-semibold uppercase tracking-wide text-red-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Hora</th>
+                  <th className="px-4 py-3 text-left">Mesa</th>
+                  <th className="px-4 py-3 text-left">Motivo</th>
+                  <th className="px-4 py-3 text-left">Cancelado por</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-red-100">
+                {cancelamentos.map((c) => (
+                  <tr key={c.id} className="bg-white">
+                    <td className="px-4 py-3 text-slate-500">{formatHora(c.canceladoEm)}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">Mesa {c.mesaNumero}</td>
+                    <td className="px-4 py-3 text-slate-500">{c.motivoCancelamento || "—"}</td>
+                    <td className="px-4 py-3 text-slate-600">{c.canceladoPor}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Vendas do dia */}
       <section>

@@ -3,16 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
-const links = [
-  { href: "/mesas",      label: "Mesas" },
-  { href: "/produtos",   label: "Cardápio" },
-  { href: "/estoque",    label: "Estoque" },
-  { href: "/financeiro", label: "Financeiro" },
+const allLinks = [
+  { href: "/mesas",      label: "Mesas",      roles: ["ADMIN", "CAIXA"] },
+  { href: "/produtos",   label: "Cardápio",   roles: ["ADMIN", "CAIXA"] },
+  { href: "/estoque",    label: "Estoque",    roles: ["ADMIN"] },
+  { href: "/financeiro", label: "Financeiro", roles: ["ADMIN"] },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role ?? "CAIXA";
+  const links = allLinks.filter((l) => l.roles.includes(role));
 
   return (
     <nav className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/10 bg-[#1a1a1a] px-6 shadow-lg">
@@ -24,22 +28,32 @@ export default function Navbar() {
       </Link>
 
       <div className="flex items-center gap-1">
-        {links.map(({ href, label }) => {
+        {session && links.map(({ href, label }) => {
           const active = pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-[#CC1111] text-white"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white"
+                active ? "bg-[#CC1111] text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
               }`}
             >
               {label}
             </Link>
           );
         })}
+
+        {session && (
+          <div className="ml-4 flex items-center gap-3 border-l border-white/10 pl-4">
+            <span className="hidden text-sm text-slate-400 sm:block">{session.user?.name}</span>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              Sair
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );
