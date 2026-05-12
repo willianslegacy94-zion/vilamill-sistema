@@ -1,7 +1,7 @@
 # Villa Mill Tamboré — Manual do Sistema
 
 **Sistema de Gestão e PDV**  
-Versão 1.1 · Maio 2026
+Versão 1.2 · Maio 2026
 
 ---
 
@@ -151,6 +151,35 @@ Use o botão **+ Novo Insumo** para cadastrar um novo item no estoque, ou os bot
 
 ---
 
+## Módulo: Despesas *(apenas Administrador)*
+
+Aqui você registra todos os gastos operacionais do restaurante — compras de mercadoria, serviços, manutenção e outros custos.
+
+### Registrar uma despesa
+
+1. Clique em **+ Nova Despesa**
+2. Preencha a **descrição** (ex: Compra de carnes), o **valor**, a **data** e a **categoria**
+3. Clique em **Salvar**
+
+### Categorias disponíveis
+
+- **Mercadoria** — compras de insumos e produtos para revenda
+- **Serviços** — entregas, fretes, prestadores
+- **Manutenção** — reparos de equipamentos e instalações
+- **Funcionários** — adiantamentos, benefícios
+- **Aluguel** — aluguel do espaço
+- **Outros** — despesas diversas
+
+### Editar ou excluir
+
+Use os botões **Editar** e **Excluir** ao lado de cada lançamento.
+
+### Filtros
+
+Use o campo de busca ou o seletor de categoria para filtrar os lançamentos exibidos.
+
+---
+
 ## Módulo: Financeiro *(apenas Administrador)*
 
 O módulo financeiro mostra o desempenho de vendas no período selecionado.
@@ -162,8 +191,9 @@ No topo da página, selecione a data inicial e a data final desejadas. Você tam
 ### Indicadores principais
 
 - **Receita Bruta** — total de todas as vendas no período
-- **Custo de Mercadoria (CMV)** — custo dos produtos vendidos
-- **Receita Líquida** — receita bruta menos o custo
+- **CMV** — custo dos produtos vendidos (calculado automaticamente)
+- **Despesas** — total dos lançamentos registrados no módulo Despesas
+- **Resultado** — Receita Bruta menos CMV menos Despesas *(fica vermelho se negativo)*
 
 ### Breakdown por pagamento
 

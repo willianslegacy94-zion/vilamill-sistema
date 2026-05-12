@@ -1,6 +1,6 @@
 # Villa Mill Tamboré — Documentação Técnica
 
-**Versão:** 1.1  
+**Versão:** 1.2  
 **Data:** Maio 2026  
 **Desenvolvedor:** Willians de Oliveira Santana  
 **Suporte:** willians.legacy94@gmail.com
@@ -114,6 +114,11 @@ id, nome, preco, costPrice, categoria, track_inventory, estoque
 → tem muitos OrderItem, RecipeItem
 ```
 
+**Despesa** — Lançamentos de despesas operacionais
+```
+id, descricao, valor, categoria, data, registradoPor, createdAt
+```
+
 **Ingredient** — Insumos do estoque
 ```
 id, nome, unidade (KG | UN | L), quantidadeAtual, nivelMinimoAlerta
@@ -193,6 +198,14 @@ Table ──< Order ──< OrderItem >── Product ──< RecipeItem >──
 | PATCH | `/api/insumos/:id` | Edita ou registra movimentação (delta) |
 | DELETE | `/api/insumos/:id` | Exclui insumo |
 
+### Despesas
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/despesas?from=&to=` | Lista despesas (filtro opcional por período) |
+| POST | `/api/despesas` | Cria lançamento de despesa |
+| PATCH | `/api/despesas/:id` | Edita despesa |
+| DELETE | `/api/despesas/:id` | Exclui despesa |
+
 ---
 
 ## 7. Autenticação e Controle de Acesso
@@ -204,7 +217,7 @@ NextAuth v5 com **Credentials Provider** + **JWT**. A senha é armazenada como h
 
 | Role | Módulos acessíveis | Pode escrever |
 |---|---|---|
-| `ADMIN` | Tudo | Sim |
+| `ADMIN` | Tudo (incluindo Despesas e Financeiro) | Sim |
 | `CAIXA` | Mesas, Cardápio, Estoque (entrada/saída) | Sim (exceto criar/editar/excluir insumos) |
 | `CAIXA` + `isTrainee` | Mesas, Cardápio, Estoque (visual) | Não — middleware retorna `{ ok: true }` sem gravar |
 
@@ -222,6 +235,15 @@ Executa em todas as rotas exceto `/login`, `/api/auth`, assets estáticos.
 ---
 
 ## 8. Lógica de Negócio Relevante
+
+### Resultado Financeiro
+O Financeiro calcula:
+- **Receita Bruta** = soma de `total` dos pedidos pagos no período
+- **CMV** = soma de `custoUnit × quantidade` dos OrderItems dos pedidos pagos
+- **Despesas** = soma de `valor` dos lançamentos em `Despesa` no período
+- **Resultado** = Receita Bruta − CMV − Despesas
+
+O card Resultado fica vermelho quando negativo.
 
 ### CMV (Custo de Mercadoria Vendida)
 - Cada `Product` tem `costPrice` (custo unitário de aquisição).
@@ -343,6 +365,7 @@ sudo systemctl status nginx              # Status
 | `20260511000000_add_cost_inventory_fields` | Adiciona `costPrice`, `track_inventory`, `estoque` em Product; `custoUnit` em OrderItem |
 | `20260511000001_add_auth_cancel_discount` | Adiciona `email`, `senhaHash` em User; `desconto` em Order; cria CancelamentoLog |
 | `20260511000002_add_credito_debito_pagamento` | Adiciona valores `CREDITO` e `DEBITO` ao enum `FormaPagamento` |
+| `20260512000000_add_despesa` | Cria tabela `Despesa` (id, descricao, valor, categoria, data, registradoPor, createdAt) |
 
 ---
 
@@ -397,7 +420,8 @@ O seed usa `updateMany` + `create` baseado no nome. Se o nome mudar, um novo pro
 
 ## 14. Pendências / Próximas Evoluções
 
-- [ ] Rodar seed no banco de produção (`npx prisma@6.4.1 db seed`)
+- [x] Deploy em produção (villamill.online com SSL)
+- [x] Módulo de Despesas com integração ao Financeiro
 - [ ] Alterar senha do Admin em produção
 - [ ] Relatório por produto (ranking de vendas)
 - [ ] Ativação da lógica de RecipeItem para baixa automática de ingredientes por ficha técnica
