@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -31,11 +31,34 @@ type MesaComPedido = {
   orders: PedidoComItens[];
 };
 
+type FormaPagamento = "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX";
+
 const STATUS = {
   LIVRE:   { label: "Livre",   bg: "bg-green-50", border: "border-green-300", badge: "bg-green-100 text-green-800" },
   OCUPADA: { label: "Ocupada", bg: "bg-red-50",   border: "border-red-400",   badge: "bg-red-100 text-red-800" },
   CONTA:   { label: "Conta",   bg: "bg-red-100",  border: "border-red-500",   badge: "bg-red-200 text-red-900" },
 } as const;
+
+const CATEGORIAS = [
+  "Pratos do Dia",
+  "Todos os Dias",
+  "Acompanhamentos",
+  "Lanches Tradicionais",
+  "Lanches na Baguete",
+  "Lanches Artesanais",
+  "Porções",
+  "Sucos",
+  "Refrigerantes",
+  "Cervejas",
+  "Sobremesas",
+];
+
+const PAGAMENTOS: { valor: FormaPagamento; label: string }[] = [
+  { valor: "DINHEIRO", label: "Dinheiro" },
+  { valor: "CREDITO",  label: "Crédito"  },
+  { valor: "DEBITO",   label: "Débito"   },
+  { valor: "PIX",      label: "Pix"      },
+];
 
 function moeda(v: string | number) {
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -45,12 +68,15 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   const router = useRouter();
   const { data: session } = useSession();
   const nomeUsuario = session?.user?.name ?? "Sistema";
+
   const [mesaIdSelecionada, setMesaIdSelecionada] = useState<string | null>(null);
   const [produtos, setProdutos] = useState<ProdutoAPI[]>([]);
   const [produtoId, setProdutoId] = useState("");
   const [quantidade, setQuantidade] = useState(1);
+  const [busca, setBusca] = useState("");
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const [formaPagamento, setFormaPagamento] = useState<"DINHEIRO" | "CARTAO" | "PIX">("DINHEIRO");
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("DINHEIRO");
   const [desconto, setDesconto] = useState(0);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
@@ -68,6 +94,17 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
       })
       .catch(console.error);
   }, []);
+
+  const produtosFiltrados = useMemo(() => {
+    const q = busca.toLowerCase();
+    return produtos.filter((p) => {
+      const matchBusca = !q || p.nome.toLowerCase().includes(q);
+      const matchCat = !categoriaAtiva || p.categoria === categoriaAtiva;
+      return matchBusca && matchCat;
+    });
+  }, [produtos, busca, categoriaAtiva]);
+
+  const produtoSelecionado = produtos.find((p) => p.id === produtoId) ?? null;
 
   async function chamarAPI(fn: () => Promise<Response>) {
     setCarregando(true);
@@ -187,7 +224,8 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
             className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-start justify-between">
+            {/* Header */}
+            <div className="mb-4 flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Mesa {mesaSelecionada.numero}</h2>
                 <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${statusConfig.badge}`}>
@@ -210,13 +248,13 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
 
             {pedidoAtivo && (
               <div className="space-y-4">
+                {/* Itens da comanda */}
                 {pedidoAtivo.items.length === 0 ? (
                   <p className="text-sm text-slate-400 text-center py-4">Nenhum item adicionado ainda.</p>
                 ) : (
-                  <>
                   <ul className="divide-y divide-slate-100">
                     {pedidoAtivo.items.map((item) => (
-                      <li key={item.id} className="flex items-center justify-between py-3">
+                      <li key={item.id} className="flex items-center justify-between py-2.5">
                         <div>
                           <div className="text-sm font-medium text-slate-900">{item.product.nome}</div>
                           <div className="text-xs text-slate-500">
@@ -236,14 +274,15 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
                       </li>
                     ))}
                   </ul>
-</>
                 )}
 
+                {/* Total */}
                 <div className="flex justify-between border-t pt-3 text-base font-bold text-slate-900">
                   <span>Total</span>
                   <span>{moeda(pedidoAtivo.total)}</span>
                 </div>
 
+                {/* Desconto */}
                 <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                   <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Desconto R$</label>
                   <input
@@ -261,51 +300,105 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
                   )}
                 </div>
 
+                {/* Adicionar item */}
                 <div className="space-y-2 rounded-lg bg-slate-50 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adicionar item</p>
-                  <select
-                    value={produtoId}
-                    onChange={(e) => setProdutoId(e.target.value)}
+
+                  {/* Busca */}
+                  <input
+                    type="text"
+                    placeholder="Buscar produto..."
+                    value={busca}
+                    onChange={(e) => { setBusca(e.target.value); setCategoriaAtiva(null); }}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  >
-                    {produtos.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nome} — {moeda(p.preco)}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
-                      className="w-20 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                    />
-                    <Button
-                      onClick={adicionarItem}
-                      disabled={carregando || !produtoId}
-                      className="flex-1"
+                  />
+
+                  {/* Categorias */}
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    <button
+                      onClick={() => { setCategoriaAtiva(null); setBusca(""); }}
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                        !categoriaAtiva && !busca
+                          ? "bg-slate-800 text-white"
+                          : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
+                      }`}
                     >
-                      {carregando ? "..." : "Adicionar"}
-                    </Button>
+                      Todos
+                    </button>
+                    {CATEGORIAS.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => { setCategoriaAtiva(cat); setBusca(""); }}
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                          categoriaAtiva === cat
+                            ? "bg-slate-800 text-white"
+                            : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
                   </div>
+
+                  {/* Lista de produtos */}
+                  <div className="max-h-48 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-100">
+                    {produtosFiltrados.length === 0 ? (
+                      <p className="px-3 py-4 text-center text-xs text-slate-400">Nenhum produto encontrado.</p>
+                    ) : (
+                      produtosFiltrados.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setProdutoId(p.id)}
+                          className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50 ${
+                            produtoId === p.id ? "bg-slate-100 font-semibold" : ""
+                          }`}
+                        >
+                          <span className="text-slate-800">{p.nome}</span>
+                          <span className="ml-2 shrink-0 text-xs font-semibold text-slate-500">{moeda(p.preco)}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Produto selecionado + quantidade */}
+                  {produtoSelecionado && (
+                    <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2">
+                      <span className="flex-1 truncate text-xs font-medium text-slate-700">
+                        {produtoSelecionado.nome}
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={quantidade}
+                        onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
+                        className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      />
+                      <Button
+                        onClick={adicionarItem}
+                        disabled={carregando || !produtoId}
+                        className="shrink-0"
+                      >
+                        {carregando ? "..." : "Adicionar"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
+                {/* Forma de pagamento */}
                 <div className="space-y-2 rounded-lg border border-slate-200 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Forma de pagamento</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["DINHEIRO", "CARTAO", "PIX"] as const).map((forma) => (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {PAGAMENTOS.map(({ valor, label }) => (
                       <button
-                        key={forma}
-                        onClick={() => setFormaPagamento(forma)}
+                        key={valor}
+                        onClick={() => setFormaPagamento(valor)}
                         className={`rounded-lg border-2 py-2 text-xs font-semibold transition-colors ${
-                          formaPagamento === forma
+                          formaPagamento === valor
                             ? "border-slate-800 bg-slate-800 text-white"
                             : "border-slate-200 text-slate-600 hover:border-slate-400"
                         }`}
                       >
-                        {forma === "DINHEIRO" ? "Dinheiro" : forma === "CARTAO" ? "Cartão" : "Pix"}
+                        {label}
                       </button>
                     ))}
                   </div>
@@ -348,6 +441,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
           </div>
         </div>
       )}
+
       {showCancelModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">

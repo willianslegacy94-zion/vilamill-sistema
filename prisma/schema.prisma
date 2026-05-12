@@ -16,12 +16,15 @@ model Table {
 }
 
 model Product {
-  id          String       @id @default(cuid())
-  nome        String
-  preco       Decimal      @db.Decimal(10, 2)
-  categoria   String
-  orderItems  OrderItem[]
-  recipeItems RecipeItem[]
+  id              String       @id @default(cuid())
+  nome            String
+  preco           Decimal      @db.Decimal(10, 2)
+  costPrice       Decimal      @db.Decimal(10, 2) @default(0)
+  categoria       String
+  track_inventory Boolean      @default(false)
+  estoque         Decimal      @db.Decimal(10, 3) @default(0)
+  orderItems      OrderItem[]
+  recipeItems     RecipeItem[]
 }
 
 model Ingredient {
@@ -71,6 +74,7 @@ model OrderItem {
   productId  String
   quantidade Decimal @db.Decimal(10, 3)
   precoUnit  Decimal @db.Decimal(10, 2)
+  custoUnit  Decimal @db.Decimal(10, 2) @default(0)
   subtotal   Decimal @db.Decimal(10, 2)
   order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product    Product @relation(fields: [productId], references: [id])
@@ -100,6 +104,8 @@ enum PaymentStatus {
 enum FormaPagamento {
   DINHEIRO
   CARTAO
+  CREDITO
+  DEBITO
   PIX
 }
 
