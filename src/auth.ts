@@ -8,15 +8,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
-        senha: { label: "Senha", type: "password" },
+        usuario: { label: "Usuário", type: "text" },
+        senha:   { label: "Senha",   type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string | undefined
-        const senha = credentials?.senha as string | undefined
-        if (!email || !senha) return null
+        const usuario = credentials?.usuario as string | undefined
+        const senha   = credentials?.senha   as string | undefined
+        if (!usuario || !senha) return null
 
-        const user = await prisma.user.findUnique({ where: { email } })
+        const user = await prisma.user.findUnique({ where: { email: usuario } })
         if (!user || !(await bcrypt.compare(senha, user.senhaHash))) return null
 
         return { id: user.id, name: user.nome, email: user.email, role: user.role }
@@ -27,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role
-        token.isTrainee = (user as any).email === "treinamento@villamill.com"
+        token.isTrainee = (user as any).email === "treinamento"
       }
       return token
     },

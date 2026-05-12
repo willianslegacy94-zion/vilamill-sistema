@@ -14,12 +14,12 @@ export default function LoginForm() {
     setError("")
     const fd = new FormData(e.currentTarget)
     const result = await signIn("credentials", {
-      email: fd.get("email"),
-      senha: fd.get("senha"),
+      usuario: fd.get("usuario"),
+      senha:   fd.get("senha"),
       redirect: false,
     })
     if (result?.error) {
-      setError("Email ou senha incorretos.")
+      setError("Usuário ou senha incorretos.")
       setLoading(false)
     } else {
       router.push("/")
@@ -30,13 +30,14 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-300">Email</label>
+        <label className="mb-1 block text-sm font-medium text-slate-300">Usuário</label>
         <input
-          name="email"
-          type="email"
+          name="usuario"
+          type="text"
           required
+          autoComplete="username"
           className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-slate-500 focus:border-[#F4C430] focus:outline-none"
-          placeholder="seu@email.com"
+          placeholder="seu usuário"
         />
       </div>
       <div>
