@@ -25,7 +25,7 @@ export default function Navbar() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role ?? "CAIXA";
   const isTrainee = (session?.user as any)?.isTrainee ?? false;
-  const links = allLinks.filter((l) => l.roles.includes(role));
+  const links = allLinks.filter((l) => isTrainee || l.roles.includes(role));
 
   return (
     <>

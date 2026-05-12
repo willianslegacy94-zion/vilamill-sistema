@@ -18,8 +18,8 @@ export default auth((req) => {
     return NextResponse.json({ ok: true, _treinamento: true })
   }
 
-  // CAIXA: bloqueia acesso direto às páginas restritas (API é sempre liberada)
-  if (role === "CAIXA" && !isApi) {
+  // CAIXA: bloqueia acesso direto às páginas restritas (trainee tem acesso total)
+  if (role === "CAIXA" && !isTrainee && !isApi) {
     const allowedPages = ["/", "/mesas", "/produtos", "/estoque"]
     const allowed = allowedPages.some((p) => pathname === p || pathname.startsWith(p + "/"))
     if (!allowed) {
