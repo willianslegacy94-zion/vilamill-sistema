@@ -1,19 +1,23 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
-# Instala dependências
+# ── Dependências ────────────────────────────────────────────────────────────
 FROM base AS deps
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json package-lock.json* yarn.lock* ./
 
-# Build
+# Usa npm ci para instalação determinística com as versões exatas do lock
+RUN npm install --legacy-peer-deps
+
+# ── Build ───────────────────────────────────────────────────────────────────
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN yarn prisma generate
-RUN yarn build
 
-# Imagem final de produção
+# Usa o Prisma local (6.8.2) — evita conflito com versão global
+RUN ./node_modules/.bin/prisma generate
+RUN npm run build
+
+# ── Runner (imagem final enxuta) ────────────────────────────────────────────
 FROM base AS runner
 ENV NODE_ENV=production
 
