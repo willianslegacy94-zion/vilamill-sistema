@@ -6,7 +6,7 @@ FROM base AS deps
 COPY package.json package-lock.json* yarn.lock* ./
 
 # Usa npm ci para instalação determinística com as versões exatas do lock
-RUN npm install --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
 # ── Build ───────────────────────────────────────────────────────────────────
 FROM base AS builder
