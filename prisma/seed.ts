@@ -164,9 +164,8 @@ async function main() {
 
   // ── Usuários ───────────────────────────────────────────────────────────────
   const usuarios = [
-    { nome: "Admin",   email: "admin@villamill.com",   senha: "admin123",   role: "ADMIN"  },
-    { nome: "Emilly",  email: "emilly@villamill.com",  senha: "emilly123",  role: "CAIXA"  },
-    { nome: "Melissa", email: "melissa@villamill.com", senha: "melissa123", role: "CAIXA"  },
+    { nome: "Admin", email: "admin@villamill.com", senha: "admin123", role: "ADMIN" },
+    { nome: "Caixa", email: "caixa@villamill.com", senha: "caixa123", role: "CAIXA" },
   ] as const;
 
   for (const u of usuarios) {
