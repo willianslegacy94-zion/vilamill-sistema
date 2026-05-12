@@ -16,10 +16,17 @@ export default function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user as any)?.role ?? "CAIXA";
+  const isTrainee = (session?.user as any)?.isTrainee ?? false;
   const links = allLinks.filter((l) => l.roles.includes(role));
 
   return (
-    <nav className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/10 bg-[#1a1a1a] px-6 shadow-lg">
+    <>
+    {isTrainee && (
+      <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-yellow-400 px-4 py-1.5 text-center text-xs font-bold text-yellow-900">
+        ⚠ MODO TREINAMENTO — Nenhuma ação é salva no banco de dados
+      </div>
+    )}
+    <nav className={`${isTrainee ? "" : "sticky top-0 "} z-40 flex h-16 items-center justify-between border-b border-white/10 bg-[#1a1a1a] px-6 shadow-lg`}>
       <Link href="/" className="flex items-center gap-3">
         <Image src="/logo.png" alt="Villa Mill Tamboré" width={44} height={44} className="rounded-full" />
         <span className="hidden text-lg font-bold tracking-tight text-white sm:block">
@@ -56,5 +63,6 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+    </>
   );
 }

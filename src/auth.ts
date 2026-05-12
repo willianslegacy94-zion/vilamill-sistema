@@ -25,11 +25,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     jwt({ token, user }) {
-      if (user) token.role = (user as any).role
+      if (user) {
+        token.role = (user as any).role
+        token.isTrainee = (user as any).email === "treinamento@villamill.com"
+      }
       return token
     },
     session({ session, token }) {
-      if (session.user) (session.user as any).role = token.role
+      if (session.user) {
+        (session.user as any).role = token.role
+        ;(session.user as any).isTrainee = token.isTrainee
+      }
       return session
     },
   },

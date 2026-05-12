@@ -6,11 +6,23 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  const role = (req.auth.user as any)?.role
-  if (role === "CAIXA") {
-    const { pathname } = req.nextUrl
-    const allowed = ["/", "/mesas", "/produtos"]
-    if (!allowed.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+  const user = req.auth.user as any
+  const role = user?.role
+  const isTrainee = user?.isTrainee
+  const { pathname } = req.nextUrl
+  const isApi = pathname.startsWith("/api/")
+  const method = req.method
+
+  // Usuário de treinamento: intercepta toda requisição mutante e retorna sucesso falso
+  if (isTrainee && isApi && method !== "GET") {
+    return NextResponse.json({ ok: true, _treinamento: true })
+  }
+
+  // CAIXA: bloqueia acesso direto às páginas restritas (API é sempre liberada)
+  if (role === "CAIXA" && !isApi) {
+    const allowedPages = ["/", "/mesas", "/produtos", "/estoque"]
+    const allowed = allowedPages.some((p) => pathname === p || pathname.startsWith(p + "/"))
+    if (!allowed) {
       return NextResponse.redirect(new URL("/mesas", req.url))
     }
   }
