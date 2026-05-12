@@ -1,6 +1,6 @@
 # Villa Mill Tamboré — Documentação Técnica
 
-**Versão:** 1.2  
+**Versão:** 1.3  
 **Data:** Maio 2026  
 **Desenvolvedor:** Willians de Oliveira Santana  
 **Suporte:** willians.legacy94@gmail.com
@@ -219,15 +219,16 @@ NextAuth v5 com **Credentials Provider** + **JWT**. A senha é armazenada como h
 |---|---|---|
 | `ADMIN` | Tudo (incluindo Despesas e Financeiro) | Sim |
 | `CAIXA` | Mesas, Cardápio, Estoque (entrada/saída) | Sim (exceto criar/editar/excluir insumos) |
-| `CAIXA` + `isTrainee` | Mesas, Cardápio, Estoque (visual) | Não — middleware retorna `{ ok: true }` sem gravar |
+| `CAIXA` + `isTrainee` | Todos os módulos (igual ao ADMIN na navegação) | Não — middleware retorna `{ ok: true }` sem gravar |
 
 ### Middleware (`src/middleware.ts`)
 Executa em todas as rotas exceto `/login`, `/api/auth`, assets estáticos.
 
 1. Sem sessão → redireciona para `/login`
-2. `isTrainee === true` + método não-GET em `/api/**` → retorna `{ ok: true }` sem processar
-3. Role `CAIXA` + rota de página fora da lista permitida → redireciona para `/mesas`
-4. Role `ADMIN` → sem restrição
+2. `isTrainee === true` + método não-GET em `/api/**` → retorna `{ ok: true, _treinamento: true }` sem processar
+3. Role `CAIXA` + **não** trainee + rota de página fora da lista permitida → redireciona para `/mesas`
+4. `isTrainee === true` → acessa todas as páginas (restrição de CAIXA não se aplica)
+5. Role `ADMIN` → sem restrição
 
 ### Proteção de página no servidor
 `/financeiro/page.tsx` chama `await auth()` e faz `redirect("/")` se role ≠ ADMIN. Dupla proteção: middleware + servidor.

@@ -1,7 +1,7 @@
 # Villa Mill Tamboré — Manual do Sistema
 
 **Sistema de Gestão e PDV**  
-Versão 1.2 · Maio 2026
+Versão 1.3 · Maio 2026
 
 ---
 
@@ -32,7 +32,7 @@ Acesso completo. Pode usar todos os módulos, ver o faturamento do dia e o relat
 Acesso ao dia a dia operacional: mesas, cardápio e estoque. Não visualiza informações financeiras.
 
 **Treinamento**
-Acesso igual ao Caixa, porém nenhuma ação é salva. Ideal para treinar novos colaboradores sem risco. Uma faixa amarela aparece na parte superior da tela indicando que o sistema está em modo de treinamento.
+Acesso completo a todos os módulos do sistema (igual ao Administrador na navegação), porém nenhuma ação é salva no banco de dados. Ideal para treinar novos colaboradores sem risco de alterar dados reais. Uma faixa amarela aparece na parte superior da tela indicando que o sistema está em modo de treinamento.
 
 ---
 
