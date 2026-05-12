@@ -1,7 +1,13 @@
 import { PrismaClient, TableStatus } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+// Hashes pré-computados com bcrypt (salt 10) — evita dependência de bcryptjs em runtime
+const HASHES: Record<string, string> = {
+  admin123:  "$2b$10$HVEC9V8qA2SoS0.dczmL7.RtCCIbYtDUg3mOZJAyj0XfcaNAb0ISK",
+  caixa123:  "$2b$10$fWN1pw3E7rde.xZYofYKU.OKwO0yvd41TYLPXcwlnRr3xGhzya7Qm",
+  treino123: "$2b$10$SUJmUlYdQeKuxSg4CRXjDe.rYp9zPeJCS6Ux6T6HlByltYooYCM9a",
+};
 
 async function main() {
   // ── Mesas ──────────────────────────────────────────────────────────────────
@@ -164,17 +170,16 @@ async function main() {
 
   // ── Usuários ───────────────────────────────────────────────────────────────
   const usuarios = [
-    { nome: "Admin",       email: "admin@villamill.com",       senha: "admin123",  role: "ADMIN" },
-    { nome: "Caixa",       email: "caixa@villamill.com",       senha: "caixa123",  role: "CAIXA" },
-    { nome: "Treinamento", email: "treinamento@villamill.com", senha: "treino123", role: "CAIXA" },
+    { nome: "Admin",       email: "admin@villamill.com",       senhaHash: HASHES["admin123"],  role: "ADMIN" },
+    { nome: "Caixa",       email: "caixa@villamill.com",       senhaHash: HASHES["caixa123"],  role: "CAIXA" },
+    { nome: "Treinamento", email: "treinamento@villamill.com", senhaHash: HASHES["treino123"], role: "CAIXA" },
   ] as const;
 
   for (const u of usuarios) {
-    const senhaHash = await bcrypt.hash(u.senha, 10);
     await prisma.user.upsert({
       where: { email: u.email },
       update: {},
-      create: { nome: u.nome, email: u.email, senhaHash, role: u.role },
+      create: { nome: u.nome, email: u.email, senhaHash: u.senhaHash, role: u.role },
     });
   }
 
