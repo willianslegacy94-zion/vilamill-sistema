@@ -53,7 +53,7 @@ export default async function FinanceiroPage({
   const inicioPeriodo = intervaloSP(fromStr).inicio;
   const fimPeriodo = intervaloSP(toStr).fim; // 23:59:59.999 SP do dia `to`
 
-  const [pedidosFechados, pedidosAbertos, cancelamentos] = await Promise.all([
+  const [pedidosFechados, pedidosAbertos, cancelamentos, despesas] = await Promise.all([
     prisma.order.findMany({
       where: { paymentStatus: "PAGO", closedAt: { gte: inicioPeriodo, lte: fimPeriodo } },
       include: { items: { include: { product: true } }, table: true },
@@ -68,6 +68,10 @@ export default async function FinanceiroPage({
       where: { canceladoEm: { gte: inicioPeriodo, lte: fimPeriodo } },
       orderBy: { canceladoEm: "desc" },
     }),
+    prisma.despesa.findMany({
+      where: { data: { gte: inicioPeriodo, lte: fimPeriodo } },
+      orderBy: { data: "desc" },
+    }),
   ]);
 
   const receitaBruta = pedidosFechados.reduce((s, p) => s + Number(p.total), 0);
@@ -75,7 +79,9 @@ export default async function FinanceiroPage({
     (s, p) => s + p.items.reduce((si, i) => si + Number(i.custoUnit) * Number(i.quantidade), 0),
     0
   );
+  const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0);
   const receitaLiquida = receitaBruta - cmv;
+  const resultado = receitaBruta - cmv - totalDespesas;
   const ticketMedio = pedidosFechados.length > 0 ? receitaBruta / pedidosFechados.length : 0;
 
   const porForma = {
@@ -105,8 +111,8 @@ export default async function FinanceiroPage({
         </div>
       </div>
 
-      {/* Fluxo de Caixa — 3 cards principais */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Fluxo de Caixa — cards principais */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-green-200 bg-green-50">
           <CardHeader>
             <CardDescription className="text-green-700">Receita Bruta</CardDescription>
@@ -116,20 +122,27 @@ export default async function FinanceiroPage({
         </Card>
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
-            <CardDescription className="text-red-700">Custo de Mercadoria (CMV)</CardDescription>
+            <CardDescription className="text-red-700">CMV</CardDescription>
             <CardTitle className="text-2xl text-red-800">{moeda(cmv)}</CardTitle>
-            <p className="text-xs text-red-600">Custo de aquisição dos itens vendidos</p>
+            <p className="text-xs text-red-600">Custo dos itens vendidos</p>
           </CardHeader>
         </Card>
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-orange-200 bg-orange-50">
           <CardHeader>
-            <CardDescription className="text-blue-700">Receita Líquida</CardDescription>
-            <CardTitle className="text-2xl text-blue-800">{moeda(receitaLiquida)}</CardTitle>
-            <p className="text-xs text-blue-600">
-              Bruto − CMV
+            <CardDescription className="text-orange-700">Despesas</CardDescription>
+            <CardTitle className="text-2xl text-orange-800">{moeda(totalDespesas)}</CardTitle>
+            <p className="text-xs text-orange-600">{despesas.length} lançamento{despesas.length !== 1 ? "s" : ""} no período</p>
+          </CardHeader>
+        </Card>
+        <Card className={resultado >= 0 ? "border-blue-200 bg-blue-50" : "border-red-300 bg-red-50"}>
+          <CardHeader>
+            <CardDescription className={resultado >= 0 ? "text-blue-700" : "text-red-700"}>Resultado</CardDescription>
+            <CardTitle className={`text-2xl ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>{moeda(resultado)}</CardTitle>
+            <p className={`text-xs ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>
+              Bruto − CMV − Despesas
               {receitaBruta > 0 && (
                 <span className="ml-1 font-semibold">
-                  ({((receitaLiquida / receitaBruta) * 100).toFixed(1)}%)
+                  ({((resultado / receitaBruta) * 100).toFixed(1)}%)
                 </span>
               )}
             </p>
@@ -275,6 +288,45 @@ export default async function FinanceiroPage({
           </div>
         )}
       </section>
+
+      {/* Despesas do período */}
+      {despesas.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-orange-700">Despesas ({despesas.length})</h2>
+          <div className="overflow-x-auto rounded-xl border border-orange-200">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Data</th>
+                  <th className="px-4 py-3 text-left">Descrição</th>
+                  <th className="px-4 py-3 text-left">Categoria</th>
+                  <th className="px-4 py-3 text-left">Registrado por</th>
+                  <th className="px-4 py-3 text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-orange-100">
+                {despesas.map((d) => (
+                  <tr key={d.id} className="bg-white">
+                    <td className="px-4 py-3 text-slate-500">{formatData(d.data)}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{d.descricao}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-block rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">{d.categoria}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">{d.registradoPor}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-orange-700">{moeda(Number(d.valor))}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t-2 border-orange-200 bg-orange-50">
+                <tr>
+                  <td colSpan={4} className="px-4 py-3 text-sm font-bold text-orange-700">Total de despesas</td>
+                  <td className="px-4 py-3 text-right text-base font-bold text-orange-700">{moeda(totalDespesas)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Cancelamentos do período */}
       {cancelamentos.length > 0 && (

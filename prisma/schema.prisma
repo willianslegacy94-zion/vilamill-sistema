@@ -89,6 +89,16 @@ model User {
   role      UserRole @default(CAIXA)
 }
 
+model Despesa {
+  id            String   @id @default(cuid())
+  descricao     String
+  valor         Decimal  @db.Decimal(10, 2)
+  categoria     String
+  data          DateTime
+  registradoPor String
+  createdAt     DateTime @default(now())
+}
+
 enum TableStatus {
   LIVRE
   OCUPADA

@@ -32,6 +32,7 @@ const modules = [
   { href: "/mesas",      title: "Mesas",       desc: "Abra mesas, lance pedidos e feche contas com forma de pagamento.", color: "bg-red-600",     symbol: "🪑", adminOnly: false },
   { href: "/produtos",   title: "Cardápio",    desc: "Gerencie produtos, preços, categorias e fichas técnicas.",         color: "bg-yellow-500", symbol: "🥩", adminOnly: false },
   { href: "/estoque",    title: "Estoque",     desc: "Controle insumos, registre entradas e veja alertas de nível mínimo.", color: "bg-emerald-600", symbol: "📦", adminOnly: false },
+  { href: "/despesas",   title: "Despesas",    desc: "Registre compras de mercadoria, serviços e outros custos operacionais.", color: "bg-orange-500", symbol: "🧾", adminOnly: true },
   { href: "/financeiro", title: "Financeiro",  desc: "Relatório diário de vendas por forma de pagamento e ticket médio.", color: "bg-blue-600",   symbol: "📊", adminOnly: true },
 ];
 

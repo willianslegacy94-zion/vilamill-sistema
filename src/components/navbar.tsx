@@ -4,13 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Home, LayoutGrid, BookOpen, Package, TrendingUp, LogOut } from "lucide-react";
+import { Home, LayoutGrid, BookOpen, Package, TrendingUp, Receipt, LogOut } from "lucide-react";
 
 const allLinks = [
   { href: "/",           label: "Início",     icon: Home,        roles: ["ADMIN", "CAIXA"] },
   { href: "/mesas",      label: "Mesas",      icon: LayoutGrid,  roles: ["ADMIN", "CAIXA"] },
   { href: "/produtos",   label: "Cardápio",   icon: BookOpen,    roles: ["ADMIN", "CAIXA"] },
   { href: "/estoque",    label: "Estoque",    icon: Package,     roles: ["ADMIN", "CAIXA"] },
+  { href: "/despesas",   label: "Despesas",   icon: Receipt,     roles: ["ADMIN"] },
   { href: "/financeiro", label: "Financeiro", icon: TrendingUp,  roles: ["ADMIN"] },
 ];
 
