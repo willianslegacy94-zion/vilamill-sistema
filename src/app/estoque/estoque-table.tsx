@@ -27,7 +27,7 @@ function formatQtd(valor: string, unidade: Unidade) {
   return unidade === "UN" ? String(Math.floor(n)) : n.toFixed(3).replace(".", ",");
 }
 
-export default function EstoqueTable({ insumos }: { insumos: Insumo[] }) {
+export default function EstoqueTable({ insumos, isAdmin = false }: { insumos: Insumo[]; isAdmin?: boolean }) {
   const router = useRouter();
   const [modo, setModo] = useState<Modo>(null);
   const [selecionado, setSelecionado] = useState<Insumo | null>(null);
@@ -125,9 +125,11 @@ export default function EstoqueTable({ insumos }: { insumos: Insumo[] }) {
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button onClick={abrirNovo}>+ Novo Insumo</Button>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end">
+          <Button onClick={abrirNovo}>+ Novo Insumo</Button>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-slate-200">
         <table className="w-full text-sm">
@@ -174,12 +176,16 @@ export default function EstoqueTable({ insumos }: { insumos: Insumo[] }) {
                       <Button variant="ghost" className="h-8 px-2 text-xs text-amber-700 hover:bg-amber-50" onClick={() => abrirMovimentacao(insumo, "saida")}>
                         Saída
                       </Button>
-                      <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => abrirEditar(insumo)}>
-                        Editar
-                      </Button>
-                      <Button variant="ghost" className="h-8 px-2 text-xs text-red-500 hover:bg-red-50" onClick={() => excluir(insumo)}>
-                        Excluir
-                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => abrirEditar(insumo)}>
+                            Editar
+                          </Button>
+                          <Button variant="ghost" className="h-8 px-2 text-xs text-red-500 hover:bg-red-50" onClick={() => excluir(insumo)}>
+                            Excluir
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -189,7 +195,7 @@ export default function EstoqueTable({ insumos }: { insumos: Insumo[] }) {
         </table>
       </div>
 
-      {(modo === "novo" || modo === "editar") && (
+      {isAdmin && (modo === "novo" || modo === "editar") && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={fecharModal}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between">

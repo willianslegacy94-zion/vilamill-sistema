@@ -8,7 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 const allLinks = [
   { href: "/mesas",      label: "Mesas",      roles: ["ADMIN", "CAIXA"] },
   { href: "/produtos",   label: "Cardápio",   roles: ["ADMIN", "CAIXA"] },
-  { href: "/estoque",    label: "Estoque",    roles: ["ADMIN"] },
+  { href: "/estoque",    label: "Estoque",    roles: ["ADMIN", "CAIXA"] },
   { href: "/financeiro", label: "Financeiro", roles: ["ADMIN"] },
 ];
 

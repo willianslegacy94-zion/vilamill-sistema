@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/services/prisma";
+import { auth } from "@/auth";
 import EstoqueTable from "./estoque-table";
 
 export default async function EstoquePage() {
+  const session = await auth();
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
+
   const insumos = await prisma.ingredient.findMany({
     orderBy: { nome: "asc" },
   });
@@ -15,7 +19,7 @@ export default async function EstoquePage() {
           ← Voltar
         </Link>
       </div>
-      <EstoqueTable insumos={JSON.parse(JSON.stringify(insumos))} />
+      <EstoqueTable insumos={JSON.parse(JSON.stringify(insumos))} isAdmin={isAdmin} />
     </main>
   );
 }

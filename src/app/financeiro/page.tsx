@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { format, startOfMonth } from "date-fns";
 import { prisma } from "@/services/prisma";
+import { auth } from "@/auth";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import DateRangeFilter from "./date-selector";
 
@@ -31,6 +33,9 @@ export default async function FinanceiroPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  const session = await auth();
+  if ((session?.user as any)?.role !== "ADMIN") redirect("/");
+
   const { from: fromParam, to: toParam } = await searchParams;
 
   // Defaults: primeiro dia do mês até hoje (SP)
