@@ -6,7 +6,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { nome, categoria, preco } = await request.json();
+  const { nome, categoria, preco, costPrice, track_inventory, estoque } = await request.json();
 
   const produto = await prisma.product.update({
     where: { id },
@@ -14,6 +14,9 @@ export async function PATCH(
       ...(nome !== undefined && { nome }),
       ...(categoria !== undefined && { categoria }),
       ...(preco !== undefined && { preco: Number(preco) }),
+      ...(costPrice !== undefined && { costPrice: Number(costPrice) }),
+      ...(track_inventory !== undefined && { track_inventory: Boolean(track_inventory) }),
+      ...(estoque !== undefined && { estoque: Number(estoque) }),
     },
   });
 

@@ -12,6 +12,8 @@ export async function POST(
   if (!product) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
 
   const preco = Number(product.preco);
+  const custo = Number(product.costPrice);
+
   const existing = await prisma.orderItem.findUnique({
     where: { orderId_productId: { orderId: id, productId } },
   });
@@ -24,7 +26,7 @@ export async function POST(
     });
   } else {
     await prisma.orderItem.create({
-      data: { orderId: id, productId, quantidade, precoUnit: preco, subtotal: preco * quantidade },
+      data: { orderId: id, productId, quantidade, precoUnit: preco, custoUnit: custo, subtotal: preco * quantidade },
     });
   }
 
