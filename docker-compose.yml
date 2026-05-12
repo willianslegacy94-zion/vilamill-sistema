@@ -12,5 +12,16 @@ services:
       - villamill_pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  app:
+    build: .
+    container_name: villamill-app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
 volumes:
   villamill_pgdata:
