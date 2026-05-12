@@ -119,6 +119,11 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
     }
   }
 
+  function fecharModal() {
+    setMesaIdSelecionada(null);
+    setDesconto(0);
+  }
+
   function abrirMesa() {
     if (!mesaSelecionada) return;
     chamarAPI(() =>
@@ -156,7 +161,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formaPagamento, desconto }),
       })
-    ).then(() => { setMesaIdSelecionada(null); setDesconto(0); });
+    ).then(fecharModal);
   }
 
   function fecharELiberar() {
@@ -167,14 +172,14 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formaPagamento, desconto }),
       })
-    ).then(() => { setMesaIdSelecionada(null); setDesconto(0); });
+    ).then(fecharModal);
   }
 
   function liberarMesaEmergencia() {
     if (!mesaSelecionada) return;
     chamarAPI(() =>
       fetch(`/api/mesas/${mesaSelecionada.id}/liberar`, { method: "PATCH" })
-    ).then(() => setMesaIdSelecionada(null));
+    ).then(fecharModal);
   }
 
   function confirmarCancelamento() {
@@ -186,12 +191,13 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ motivoCancelamento, canceladoPor: nomeUsuario }),
       })
-    ).then(() => { setMesaIdSelecionada(null); setMotivoCancelamento(""); });
+    ).then(() => { fecharModal(); setMotivoCancelamento(""); });
   }
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {/* Grade de mesas: 2 colunas no mobile, 4 no tablet, 6 no desktop */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {mesas.map((mesa) => {
           const cfg = STATUS[(mesa.status as keyof typeof STATUS) ?? "LIVRE"];
           const pedido = mesa.orders[0];
@@ -199,7 +205,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
             <button
               key={mesa.id}
               onClick={() => setMesaIdSelecionada(mesa.id)}
-              className={`rounded-xl border-2 ${cfg.border} ${cfg.bg} p-4 text-left transition-opacity hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-slate-400`}
+              className={`rounded-xl border-2 ${cfg.border} ${cfg.bg} p-4 text-left transition-opacity active:opacity-60 hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-slate-400`}
             >
               <div className="text-3xl font-bold text-slate-900">{mesa.numero}</div>
               <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.badge}`}>
@@ -215,259 +221,274 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
         })}
       </div>
 
+      {/* Modal — bottom-sheet no mobile, centralizado no sm+ */}
       {mesaSelecionada && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() => setMesaIdSelecionada(null)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center bg-black/50 sm:px-4"
+          onClick={fecharModal}
         >
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Mesa {mesaSelecionada.numero}</h2>
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${statusConfig.badge}`}>
-                  {statusConfig.label}
-                </span>
-              </div>
-              <button
-                onClick={() => setMesaIdSelecionada(null)}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
-              >
-                ×
-              </button>
+            {/* Alça visual no mobile */}
+            <div className="flex justify-center pt-3 sm:hidden">
+              <div className="h-1 w-10 rounded-full bg-slate-300" />
             </div>
 
-            {mesaSelecionada.status === "LIVRE" && (
-              <Button onClick={abrirMesa} disabled={carregando} className="w-full">
-                {carregando ? "Abrindo..." : "Abrir Mesa"}
-              </Button>
-            )}
+            <div className="p-5 sm:p-6">
+              {/* Header */}
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Mesa {mesaSelecionada.numero}</h2>
+                  <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${statusConfig.badge}`}>
+                    {statusConfig.label}
+                  </span>
+                </div>
+                <button
+                  onClick={fecharModal}
+                  className="p-2 text-slate-400 hover:text-slate-600 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
 
-            {pedidoAtivo && (
-              <div className="space-y-4">
-                {/* Itens da comanda */}
-                {pedidoAtivo.items.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">Nenhum item adicionado ainda.</p>
-                ) : (
-                  <ul className="divide-y divide-slate-100">
-                    {pedidoAtivo.items.map((item) => (
-                      <li key={item.id} className="flex items-center justify-between py-2.5">
-                        <div>
-                          <div className="text-sm font-medium text-slate-900">{item.product.nome}</div>
-                          <div className="text-xs text-slate-500">
-                            {Number(item.quantidade)}× {moeda(item.precoUnit)}
+              {mesaSelecionada.status === "LIVRE" && (
+                <Button onClick={abrirMesa} disabled={carregando} className="w-full py-4 text-base">
+                  {carregando ? "Abrindo..." : "Abrir Mesa"}
+                </Button>
+              )}
+
+              {pedidoAtivo && (
+                <div className="space-y-4">
+                  {/* Itens da comanda */}
+                  {pedidoAtivo.items.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Nenhum item adicionado ainda.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100">
+                      {pedidoAtivo.items.map((item) => (
+                        <li key={item.id} className="flex items-center justify-between py-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">{item.product.nome}</div>
+                            <div className="text-xs text-slate-500">
+                              {Number(item.quantidade)}× {moeda(item.precoUnit)}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-slate-800">{moeda(item.subtotal)}</span>
-                          <button
-                            onClick={() => removerItem(item.id)}
-                            disabled={carregando}
-                            className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40"
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* Total */}
-                <div className="flex justify-between border-t pt-3 text-base font-bold text-slate-900">
-                  <span>Total</span>
-                  <span>{moeda(pedidoAtivo.total)}</span>
-                </div>
-
-                {/* Desconto */}
-                <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                  <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Desconto R$</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={desconto}
-                    onChange={(e) => setDesconto(Math.max(0, Number(e.target.value)))}
-                    className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  />
-                  {desconto > 0 && (
-                    <span className="ml-auto text-sm font-bold text-green-700">
-                      = {moeda(Math.max(0, Number(pedidoAtivo.total) - desconto))}
-                    </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-semibold text-slate-800">{moeda(item.subtotal)}</span>
+                            <button
+                              onClick={() => removerItem(item.id)}
+                              disabled={carregando}
+                              className="px-2 py-1 text-xs text-red-400 hover:text-red-600 disabled:opacity-40"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </div>
 
-                {/* Adicionar item */}
-                <div className="space-y-2 rounded-lg bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adicionar item</p>
+                  {/* Total */}
+                  <div className="flex justify-between border-t pt-3 text-base font-bold text-slate-900">
+                    <span>Total</span>
+                    <span>{moeda(pedidoAtivo.total)}</span>
+                  </div>
 
-                  {/* Busca */}
-                  <input
-                    type="text"
-                    placeholder="Buscar produto..."
-                    value={busca}
-                    onChange={(e) => { setBusca(e.target.value); setCategoriaAtiva(null); }}
-                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  />
+                  {/* Desconto */}
+                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-3">
+                    <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Desconto R$</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={desconto}
+                      onChange={(e) => setDesconto(Math.max(0, Number(e.target.value)))}
+                      className="w-24 rounded-md border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    />
+                    {desconto > 0 && (
+                      <span className="ml-auto text-sm font-bold text-green-700">
+                        = {moeda(Math.max(0, Number(pedidoAtivo.total) - desconto))}
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Categorias */}
-                  <div className="flex gap-1.5 overflow-x-auto pb-1">
-                    <button
-                      onClick={() => { setCategoriaAtiva(null); setBusca(""); }}
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                        !categoriaAtiva && !busca
-                          ? "bg-slate-800 text-white"
-                          : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
-                      }`}
-                    >
-                      Todos
-                    </button>
-                    {CATEGORIAS.map((cat) => (
+                  {/* Adicionar item */}
+                  <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adicionar item</p>
+
+                    {/* Busca */}
+                    <input
+                      type="text"
+                      placeholder="Buscar produto..."
+                      value={busca}
+                      onChange={(e) => { setBusca(e.target.value); setCategoriaAtiva(null); }}
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    />
+
+                    {/* Categorias */}
+                    <div className="flex gap-1.5 overflow-x-auto pb-1">
                       <button
-                        key={cat}
-                        onClick={() => { setCategoriaAtiva(cat); setBusca(""); }}
-                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                          categoriaAtiva === cat
+                        onClick={() => { setCategoriaAtiva(null); setBusca(""); }}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          !categoriaAtiva && !busca
                             ? "bg-slate-800 text-white"
                             : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
                         }`}
                       >
-                        {cat}
+                        Todos
                       </button>
-                    ))}
-                  </div>
-
-                  {/* Lista de produtos */}
-                  <div className="max-h-48 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-100">
-                    {produtosFiltrados.length === 0 ? (
-                      <p className="px-3 py-4 text-center text-xs text-slate-400">Nenhum produto encontrado.</p>
-                    ) : (
-                      produtosFiltrados.map((p) => (
+                      {CATEGORIAS.map((cat) => (
                         <button
-                          key={p.id}
-                          onClick={() => setProdutoId(p.id)}
-                          className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50 ${
-                            produtoId === p.id ? "bg-slate-100 font-semibold" : ""
+                          key={cat}
+                          onClick={() => { setCategoriaAtiva(cat); setBusca(""); }}
+                          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            categoriaAtiva === cat
+                              ? "bg-slate-800 text-white"
+                              : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
                           }`}
                         >
-                          <span className="text-slate-800">{p.nome}</span>
-                          <span className="ml-2 shrink-0 text-xs font-semibold text-slate-500">{moeda(p.preco)}</span>
+                          {cat}
                         </button>
-                      ))
+                      ))}
+                    </div>
+
+                    {/* Lista de produtos */}
+                    <div className="max-h-48 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-100">
+                      {produtosFiltrados.length === 0 ? (
+                        <p className="px-3 py-4 text-center text-xs text-slate-400">Nenhum produto encontrado.</p>
+                      ) : (
+                        produtosFiltrados.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => setProdutoId(p.id)}
+                            className={`w-full flex items-center justify-between px-3 py-3 text-left text-sm transition-colors active:bg-slate-100 hover:bg-slate-50 ${
+                              produtoId === p.id ? "bg-slate-100 font-semibold" : ""
+                            }`}
+                          >
+                            <span className="text-slate-800">{p.nome}</span>
+                            <span className="ml-2 shrink-0 text-xs font-semibold text-slate-500">{moeda(p.preco)}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Produto selecionado + quantidade */}
+                    {produtoSelecionado && (
+                      <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2">
+                        <span className="flex-1 truncate text-xs font-medium text-slate-700">
+                          {produtoSelecionado.nome}
+                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={quantidade}
+                          onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
+                          className="w-16 rounded-md border border-slate-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        />
+                        <Button
+                          onClick={adicionarItem}
+                          disabled={carregando || !produtoId}
+                          className="shrink-0 px-4 py-2.5"
+                        >
+                          {carregando ? "..." : "Adicionar"}
+                        </Button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Produto selecionado + quantidade */}
-                  {produtoSelecionado && (
-                    <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2">
-                      <span className="flex-1 truncate text-xs font-medium text-slate-700">
-                        {produtoSelecionado.nome}
-                      </span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={quantidade}
-                        onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
-                        className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
-                      />
-                      <Button
-                        onClick={adicionarItem}
-                        disabled={carregando || !produtoId}
-                        className="shrink-0"
-                      >
-                        {carregando ? "..." : "Adicionar"}
-                      </Button>
+                  {/* Forma de pagamento */}
+                  <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Forma de pagamento</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {PAGAMENTOS.map(({ valor, label }) => (
+                        <button
+                          key={valor}
+                          onClick={() => setFormaPagamento(valor)}
+                          className={`rounded-lg border-2 py-3 text-sm font-semibold transition-colors ${
+                            formaPagamento === valor
+                              ? "border-slate-800 bg-slate-800 text-white"
+                              : "border-slate-200 text-slate-600 hover:border-slate-400"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-
-                {/* Forma de pagamento */}
-                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Forma de pagamento</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {PAGAMENTOS.map(({ valor, label }) => (
-                      <button
-                        key={valor}
-                        onClick={() => setFormaPagamento(valor)}
-                        className={`rounded-lg border-2 py-2 text-xs font-semibold transition-colors ${
-                          formaPagamento === valor
-                            ? "border-slate-800 bg-slate-800 text-white"
-                            : "border-slate-200 text-slate-600 hover:border-slate-400"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
                   </div>
+
+                  {/* Botões de ação principais — py-4 para polegar */}
+                  <Button
+                    onClick={fecharConta}
+                    disabled={carregando || pedidoAtivo.items.length === 0}
+                    variant="outline"
+                    className="w-full py-4 text-base border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    {carregando ? "Fechando..." : "Fechar Conta"}
+                  </Button>
+
+                  <Button
+                    onClick={fecharELiberar}
+                    disabled={carregando || pedidoAtivo.items.length === 0}
+                    className="w-full py-4 text-base bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    {carregando ? "Processando..." : "Fechar e Liberar Mesa"}
+                  </Button>
+
+                  <button
+                    onClick={liberarMesaEmergencia}
+                    disabled={carregando}
+                    className="w-full rounded-lg border border-amber-300 py-4 text-sm font-semibold text-amber-600 hover:bg-amber-50 disabled:opacity-40 active:bg-amber-100"
+                  >
+                    Liberar Mesa (emergência)
+                  </button>
+
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    disabled={carregando}
+                    className="w-full py-3 text-sm text-slate-400 hover:text-red-500 disabled:opacity-40"
+                  >
+                    Cancelar e liberar mesa
+                  </button>
                 </div>
-
-                <Button
-                  onClick={fecharConta}
-                  disabled={carregando || pedidoAtivo.items.length === 0}
-                  variant="outline"
-                  className="w-full border-red-300 text-red-700 hover:bg-red-50"
-                >
-                  {carregando ? "Fechando..." : "Fechar Conta"}
-                </Button>
-
-                <Button
-                  onClick={fecharELiberar}
-                  disabled={carregando || pedidoAtivo.items.length === 0}
-                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                >
-                  {carregando ? "Processando..." : "Fechar e Liberar Mesa"}
-                </Button>
-
-                <button
-                  onClick={liberarMesaEmergencia}
-                  disabled={carregando}
-                  className="w-full rounded-lg border border-amber-300 py-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 disabled:opacity-40"
-                >
-                  Liberar Mesa (emergência)
-                </button>
-
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  disabled={carregando}
-                  className="w-full text-xs text-slate-400 hover:text-red-500 disabled:opacity-40 py-1"
-                >
-                  Cancelar e liberar mesa
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
 
+      {/* Modal de cancelamento */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="mb-1 text-lg font-bold text-slate-900">Cancelar mesa {mesaSelecionada?.numero}?</h3>
-            <p className="mb-4 text-sm text-slate-500">Todos os itens serão descartados.</p>
-            <textarea
-              value={motivoCancelamento}
-              onChange={(e) => setMotivoCancelamento(e.target.value)}
-              placeholder="Motivo (opcional)"
-              rows={3}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="flex-1 rounded-lg border border-slate-300 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={confirmarCancelamento}
-                disabled={carregando}
-                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                Confirmar cancelamento
-              </button>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center bg-black/60 sm:px-4">
+          <div className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
+            <div className="flex justify-center pt-3 sm:hidden">
+              <div className="h-1 w-10 rounded-full bg-slate-300" />
+            </div>
+            <div className="p-6">
+              <h3 className="mb-1 text-lg font-bold text-slate-900">Cancelar mesa {mesaSelecionada?.numero}?</h3>
+              <p className="mb-4 text-sm text-slate-500">Todos os itens serão descartados.</p>
+              <textarea
+                value={motivoCancelamento}
+                onChange={(e) => setMotivoCancelamento(e.target.value)}
+                placeholder="Motivo (opcional)"
+                rows={3}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 rounded-lg border border-slate-300 py-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <button
+                  onClick={confirmarCancelamento}
+                  disabled={carregando}
+                  className="flex-1 rounded-lg bg-red-600 py-4 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                >
+                  Confirmar cancelamento
+                </button>
+              </div>
             </div>
           </div>
         </div>

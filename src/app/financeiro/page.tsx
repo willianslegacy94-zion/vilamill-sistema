@@ -184,8 +184,8 @@ export default async function FinanceiroPage({
         {pedidosFechados.length === 0 ? (
           <p className="text-sm text-slate-400">Nenhuma venda registrada neste período.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full min-w-[520px] text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Mesa</th>
@@ -247,8 +247,8 @@ export default async function FinanceiroPage({
         {pedidosAbertos.length === 0 ? (
           <p className="text-sm text-slate-400">Nenhuma mesa aberta no momento.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full min-w-[420px] text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Mesa</th>
@@ -278,8 +278,8 @@ export default async function FinanceiroPage({
       {cancelamentos.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold text-red-700">Cancelamentos ({cancelamentos.length})</h2>
-          <div className="overflow-hidden rounded-xl border border-red-200">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border border-red-200">
+            <table className="w-full min-w-[380px] text-sm">
               <thead className="bg-red-50 text-xs font-semibold uppercase tracking-wide text-red-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Hora</th>
