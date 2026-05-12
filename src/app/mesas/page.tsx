@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/services/prisma";
 import MesasGrid from "./mesas-grid";
 
+export const dynamic = "force-dynamic";
+
 export default async function MesasPage() {
   const mesas = await prisma.table.findMany({
     orderBy: { numero: "asc" },

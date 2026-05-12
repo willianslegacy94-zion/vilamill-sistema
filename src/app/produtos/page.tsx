@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/services/prisma";
 import ProdutosTable from "./produtos-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProdutosPage() {
   const produtos = await prisma.product.findMany({
     orderBy: [{ categoria: "asc" }, { nome: "asc" }],

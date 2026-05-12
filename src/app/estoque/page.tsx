@@ -3,6 +3,8 @@ import { prisma } from "@/services/prisma";
 import { auth } from "@/auth";
 import EstoqueTable from "./estoque-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function EstoquePage() {
   const session = await auth();
   const isAdmin = (session?.user as any)?.role === "ADMIN";

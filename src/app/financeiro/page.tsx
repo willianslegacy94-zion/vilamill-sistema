@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { format, startOfMonth } from "date-fns";
 import { prisma } from "@/services/prisma";
 import { auth } from "@/auth";
+
+export const dynamic = "force-dynamic";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import DateRangeFilter from "./date-selector";
 

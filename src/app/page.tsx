@@ -4,6 +4,8 @@ import { TriangleAlert } from "lucide-react";
 import { prisma } from "@/services/prisma";
 import { auth } from "@/auth";
 
+export const dynamic = "force-dynamic";
+
 async function getStats() {
   const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
   const inicioDia = new Date(`${hoje}T03:00:00.000Z`);
