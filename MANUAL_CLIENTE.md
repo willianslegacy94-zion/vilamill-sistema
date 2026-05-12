@@ -1,7 +1,7 @@
 # Villa Mill Tamboré — Manual do Sistema
 
 **Sistema de Gestão e PDV**  
-Versão 1.0 · Maio 2026
+Versão 1.1 · Maio 2026
 
 ---
 
@@ -13,7 +13,7 @@ Este sistema foi criado para facilitar o dia a dia do restaurante: abrir mesas, 
 
 ## Como acessar
 
-Abra o navegador e acesse o endereço fornecido pelo seu administrador.
+Abra o navegador e acesse: **https://villamill.online**
 
 Você verá a tela de login. Insira seu **e-mail** e sua **senha** e clique em **Entrar**.
 
@@ -214,4 +214,5 @@ A atualização automática do estoque ocorre apenas para produtos configurados 
 
 ---
 
-*Sistema desenvolvido por DataMeet para Villa Mill Tamboré.*
+*Sistema desenvolvido por Willians de Oliveira Santana para Villa Mill Tamboré.*  
+*Suporte: willians.legacy94@gmail.com*
