@@ -1,20 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/services/prisma";
 import MesasGrid from "./mesas-grid";
 
-export const dynamic = "force-dynamic";
-
-export default async function MesasPage() {
-  const mesas = await prisma.table.findMany({
-    orderBy: { numero: "asc" },
-    include: {
-      orders: {
-        where: { paymentStatus: "PENDENTE" },
-        include: { items: { include: { product: true } } },
-      },
-    },
-  });
-
+export default function MesasPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-6 py-12">
       <div className="flex items-center justify-between">
@@ -23,7 +10,7 @@ export default async function MesasPage() {
           ← Voltar
         </Link>
       </div>
-      <MesasGrid mesas={JSON.parse(JSON.stringify(mesas))} />
+      <MesasGrid />
     </main>
   );
 }

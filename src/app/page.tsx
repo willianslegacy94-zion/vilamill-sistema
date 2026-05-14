@@ -1,32 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { TriangleAlert } from "lucide-react";
-import { prisma } from "@/services/prisma";
 import { auth } from "@/auth";
+import DashboardStats from "./dashboard-stats";
 
 export const dynamic = "force-dynamic";
-
-async function getStats() {
-  const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  const inicioDia = new Date(`${hoje}T03:00:00.000Z`);
-  const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-  const [mesasAbertas, todosInsumos, vendasHoje] = await Promise.all([
-    prisma.order.count({ where: { paymentStatus: "PENDENTE" } }),
-    prisma.ingredient.findMany({ select: { id: true, nome: true, quantidadeAtual: true, nivelMinimoAlerta: true } }),
-    prisma.order.aggregate({
-      where: { paymentStatus: "PAGO", closedAt: { gte: inicioDia, lte: fimDia } },
-      _sum: { total: true },
-      _count: true,
-    }),
-  ]);
-
-  const insumoCriticos = todosInsumos.filter(
-    (i) => Number(i.quantidadeAtual) <= Number(i.nivelMinimoAlerta)
-  );
-
-  return { mesasAbertas, insumoCriticos, vendasHoje };
-}
 
 const modules = [
   { href: "/mesas",      title: "Mesas",       desc: "Abra mesas, lance pedidos e feche contas com forma de pagamento.", color: "bg-red-600",     symbol: "🪑", adminOnly: false },
@@ -40,13 +17,7 @@ export default async function Home() {
   const session = await auth();
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isTrainee = (session?.user as any)?.isTrainee ?? false;
-  const { mesasAbertas, insumoCriticos, vendasHoje } = await getStats();
   const visibleModules = modules.filter((m) => !m.adminOnly || isAdmin || isTrainee);
-
-  const faturamento = Number(vendasHoje._sum.total ?? 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -59,37 +30,8 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Indicadores rápidos */}
-      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mesas abertas</p>
-          <p className={`mt-1 text-3xl font-bold ${mesasAbertas > 0 ? "text-amber-600" : "text-slate-800"}`}>
-            {mesasAbertas}
-          </p>
-        </div>
-        {(isAdmin || isTrainee) && (
-          <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Faturamento hoje</p>
-            <p className="mt-1 text-2xl font-bold text-green-600">{faturamento}</p>
-          </div>
-        )}
-        <div className={`rounded-xl border border-slate-200 bg-white px-5 py-4 ${!isAdmin && !isTrainee ? "col-span-1" : "col-span-2 md:col-span-1"}`}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pedidos fechados</p>
-          <p className="mt-1 text-3xl font-bold text-slate-800">{vendasHoje._count}</p>
-        </div>
-      </div>
-
-      {/* Alertas de estoque crítico */}
-      {insumoCriticos.length > 0 && (
-        <div className="mb-8 flex flex-col gap-2">
-          {insumoCriticos.map((i) => (
-            <div key={i.id} className="flex items-center gap-3 rounded-xl border border-red-300 bg-red-50 px-5 py-3">
-              <TriangleAlert className="h-5 w-5 shrink-0 text-red-600" />
-              <p className="font-semibold text-red-700">ESTOQUE CRÍTICO: {i.nome}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Stats com atualização automática via SWR */}
+      <DashboardStats isAdmin={isAdmin} isTrainee={isTrainee} />
 
       {/* Módulos */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

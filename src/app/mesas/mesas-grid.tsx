@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { useMesas } from "@/hooks/useAppData";
 
 type ProdutoAPI = { id: string; nome: string; preco: string; categoria: string };
 
@@ -65,11 +65,12 @@ function moeda(v: string | number) {
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
-  const router = useRouter();
+export default function MesasGrid() {
   const { data: session } = useSession();
   const nomeUsuario = session?.user?.name ?? "Sistema";
   const isTrainee = (session?.user as any)?.isTrainee ?? false;
+  const { mesas: rawMesas, mutate } = useMesas();
+  const mesas = rawMesas as MesaComPedido[];
 
   const [mesaIdSelecionada, setMesaIdSelecionada] = useState<string | null>(null);
   const [produtos, setProdutos] = useState<ProdutoAPI[]>([]);
@@ -131,7 +132,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
     try {
       const res = await fn();
       if (!res.ok) throw new Error();
-      router.refresh();
+      mutate();
     } catch {
       alert("Ocorreu um erro. Tente novamente.");
     } finally {
