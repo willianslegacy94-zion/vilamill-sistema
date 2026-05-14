@@ -11,6 +11,9 @@ const fetcher = (url: string) =>
 const SWR_CONFIG = {
   refreshInterval: 3000,
   revalidateOnFocus: true,
+  // keeps previous data visible while new data loads — prevents blank flashes
+  // when the key changes (e.g. date filter in financeiro) or on remount
+  keepPreviousData: true,
 };
 
 export function useMesas() {
@@ -24,10 +27,10 @@ export function useDashboard() {
 }
 
 export function useFinanceiro(from: string, to: string) {
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     `/api/financeiro?from=${from}&to=${to}`,
     fetcher,
     SWR_CONFIG
   );
-  return { data: data ?? null, isLoading, error, mutate };
+  return { data: data ?? null, isLoading, isValidating, error, mutate };
 }

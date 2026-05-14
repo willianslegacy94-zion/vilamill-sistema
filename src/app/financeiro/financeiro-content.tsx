@@ -38,12 +38,44 @@ type PedidoAberto = {
 type Cancelamento = { id: string; mesaNumero: number; motivoCancelamento: string | null; canceladoPor: string; canceladoEm: string };
 type Despesa = { id: string; descricao: string; valor: string | number; categoria: string; data: string; registradoPor: string };
 
+function FinanceiroSkeleton() {
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-12 animate-pulse">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="h-8 w-32 rounded bg-slate-200" />
+        <div className="h-8 w-56 rounded bg-slate-200" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
+            <div className="mb-3 h-3 w-24 rounded bg-slate-200" />
+            <div className="h-8 w-28 rounded bg-slate-200" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
+            <div className="mb-3 h-3 w-24 rounded bg-slate-200" />
+            <div className="h-8 w-16 rounded bg-slate-200" />
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
 export default function FinanceiroContent() {
   const params = useSearchParams();
   const fromStr = params.get("from") ?? primeiroDiaMes();
   const toStr   = params.get("to")   ?? hojeStr();
 
-  const { data, isLoading } = useFinanceiro(fromStr, toStr);
+  const { data, isLoading, isValidating } = useFinanceiro(fromStr, toStr) as any;
+
+  // Show skeleton only on true initial load (no data at all).
+  // keepPreviousData ensures data stays populated during date-range key changes,
+  // so the skeleton won't flash when switching periods.
+  if (isLoading && !data) return <FinanceiroSkeleton />;
 
   const pedidosFechados: Pedido[]       = data?.pedidosFechados ?? [];
   const pedidosAbertos: PedidoAberto[]  = data?.pedidosAbertos  ?? [];
@@ -87,14 +119,13 @@ export default function FinanceiroContent() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
-          {isLoading && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-              Atualizando
-            </span>
-          )}
+          {/* Subtle live-sync indicator — visible only while fetching, never hides content */}
+          <span
+            className={`h-2 w-2 rounded-full bg-emerald-400 transition-opacity duration-500 ${isValidating ? "opacity-100" : "opacity-0"}`}
+            title="Sincronizando..."
+          />
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <Suspense>
