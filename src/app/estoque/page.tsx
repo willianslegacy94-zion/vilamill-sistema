@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 
 export default async function EstoquePage() {
   const session = await auth();
-  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const role = (session?.user as any)?.role;
+  const isAdmin = role === "ADMIN" || role === "CAIXA";
+  const isTrainee = (session?.user as any)?.isTrainee ?? false;
 
   const insumos = await prisma.ingredient.findMany({
     orderBy: { nome: "asc" },
@@ -21,7 +23,7 @@ export default async function EstoquePage() {
           ← Voltar
         </Link>
       </div>
-      <EstoqueTable insumos={JSON.parse(JSON.stringify(insumos))} isAdmin={isAdmin} />
+      <EstoqueTable insumos={JSON.parse(JSON.stringify(insumos))} isAdmin={isAdmin || isTrainee} />
     </main>
   );
 }

@@ -39,8 +39,9 @@ const modules = [
 export default async function Home() {
   const session = await auth();
   const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const isTrainee = (session?.user as any)?.isTrainee ?? false;
   const { mesasAbertas, insumoCriticos, vendasHoje } = await getStats();
-  const visibleModules = modules.filter((m) => !m.adminOnly || isAdmin);
+  const visibleModules = modules.filter((m) => !m.adminOnly || isAdmin || isTrainee);
 
   const faturamento = Number(vendasHoje._sum.total ?? 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -66,13 +67,13 @@ export default async function Home() {
             {mesasAbertas}
           </p>
         </div>
-        {isAdmin && (
+        {(isAdmin || isTrainee) && (
           <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Faturamento hoje</p>
             <p className="mt-1 text-2xl font-bold text-green-600">{faturamento}</p>
           </div>
         )}
-        <div className={`rounded-xl border border-slate-200 bg-white px-5 py-4 ${!isAdmin ? "col-span-1" : "col-span-2 md:col-span-1"}`}>
+        <div className={`rounded-xl border border-slate-200 bg-white px-5 py-4 ${!isAdmin && !isTrainee ? "col-span-1" : "col-span-2 md:col-span-1"}`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pedidos fechados</p>
           <p className="mt-1 text-3xl font-bold text-slate-800">{vendasHoje._count}</p>
         </div>

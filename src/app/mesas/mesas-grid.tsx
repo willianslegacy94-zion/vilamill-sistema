@@ -32,6 +32,7 @@ type MesaComPedido = {
 };
 
 type FormaPagamento = "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX";
+type PagamentoSplit = { forma: FormaPagamento; valor: string };
 
 const STATUS = {
   LIVRE:   { label: "Livre",   bg: "bg-green-50", border: "border-green-300", badge: "bg-green-100 text-green-800" },
@@ -68,6 +69,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   const router = useRouter();
   const { data: session } = useSession();
   const nomeUsuario = session?.user?.name ?? "Sistema";
+  const isTrainee = (session?.user as any)?.isTrainee ?? false;
 
   const [mesaIdSelecionada, setMesaIdSelecionada] = useState<string | null>(null);
   const [produtos, setProdutos] = useState<ProdutoAPI[]>([]);
@@ -76,14 +78,32 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("DINHEIRO");
+  const [pagamentos, setPagamentos] = useState<PagamentoSplit[]>([{ forma: "DINHEIRO", valor: "" }]);
   const [desconto, setDesconto] = useState(0);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
+  // Estado simulado para o modo treinamento (não persiste no banco)
+  const [simulado, setSimulado] = useState<Record<string, MesaComPedido>>({});
 
   const mesaSelecionada = mesas.find((m) => m.id === mesaIdSelecionada) ?? null;
-  const pedidoAtivo = mesaSelecionada?.orders[0] ?? null;
-  const statusConfig = STATUS[(mesaSelecionada?.status as keyof typeof STATUS) ?? "LIVRE"];
+  const mesaEfetiva = (isTrainee && mesaIdSelecionada && simulado[mesaIdSelecionada])
+    ? simulado[mesaIdSelecionada]
+    : mesaSelecionada;
+  const pedidoAtivo = mesaEfetiva?.orders[0] ?? null;
+  const statusConfig = STATUS[(mesaEfetiva?.status as keyof typeof STATUS) ?? "LIVRE"];
+
+  const totalComDesconto = Math.max(0, Number(pedidoAtivo?.total ?? 0) - desconto);
+  const totalPago = pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+  const restante = Math.round((totalComDesconto - totalPago) * 100) / 100;
+  const podeFechar =
+    (pedidoAtivo?.items.length ?? 0) > 0 &&
+    (totalComDesconto === 0 || Math.abs(restante) < 0.01);
+
+  useEffect(() => {
+    if (!mesaIdSelecionada) return;
+    setDesconto(0);
+    setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
+  }, [mesaIdSelecionada]);
 
   useEffect(() => {
     fetch("/api/produtos")
@@ -122,10 +142,52 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   function fecharModal() {
     setMesaIdSelecionada(null);
     setDesconto(0);
+    setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
+  }
+
+  function atualizarPagamento(i: number, field: keyof PagamentoSplit, value: string) {
+    setPagamentos((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
+  }
+
+  function adicionarPagamento() {
+    const falta = Math.max(0, restante);
+    setPagamentos((prev) => [
+      ...prev,
+      { forma: "DINHEIRO", valor: falta > 0 ? falta.toFixed(2) : "" },
+    ]);
+  }
+
+  function removerPagamento(i: number) {
+    setPagamentos((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  function buildPagamentosPayload() {
+    return pagamentos
+      .filter((p) => Number(p.valor) > 0)
+      .map((p) => ({ forma: p.forma, valor: Number(p.valor) }));
+  }
+
+  // ── Helpers de simulação (modo treinamento) ──────────────────────────────
+  function atualizarSimulado(mesa: MesaComPedido) {
+    setSimulado((prev) => ({ ...prev, [mesa.id]: mesa }));
+  }
+  function limparSimulado(mesaId: string) {
+    setSimulado((prev) => { const { [mesaId]: _, ...rest } = prev; return rest; });
   }
 
   function abrirMesa() {
     if (!mesaSelecionada) return;
+    if (isTrainee) {
+      const fakePedido: PedidoComItens = {
+        id: `treino-${Date.now()}`,
+        mesaId: mesaSelecionada.id,
+        paymentStatus: "PENDENTE",
+        total: "0.00",
+        items: [],
+      };
+      atualizarSimulado({ ...mesaSelecionada, status: "OCUPADA", orders: [fakePedido] });
+      return;
+    }
     chamarAPI(() =>
       fetch("/api/pedidos", {
         method: "POST",
@@ -136,7 +198,37 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   }
 
   function adicionarItem() {
-    if (!pedidoAtivo || !produtoId) return;
+    if (!pedidoAtivo || !produtoId || !mesaEfetiva) return;
+    if (isTrainee) {
+      const produto = produtos.find((p) => p.id === produtoId);
+      if (!produto) return;
+      const existente = pedidoAtivo.items.find((i) => i.productId === produtoId);
+      let novosItens: ItemPedido[];
+      if (existente) {
+        const novaQtd = Number(existente.quantidade) + quantidade;
+        novosItens = pedidoAtivo.items.map((i) =>
+          i.productId === produtoId
+            ? { ...i, quantidade: String(novaQtd), subtotal: (Number(i.precoUnit) * novaQtd).toFixed(2) }
+            : i
+        );
+      } else {
+        novosItens = [
+          ...pedidoAtivo.items,
+          {
+            id: `treino-item-${Date.now()}`,
+            productId: produtoId,
+            quantidade: String(quantidade),
+            precoUnit: produto.preco,
+            subtotal: (Number(produto.preco) * quantidade).toFixed(2),
+            product: produto,
+          },
+        ];
+      }
+      const novoTotal = novosItens.reduce((s, i) => s + Number(i.subtotal), 0).toFixed(2);
+      atualizarSimulado({ ...mesaEfetiva, orders: [{ ...pedidoAtivo, items: novosItens, total: novoTotal }] });
+      setQuantidade(1);
+      return;
+    }
     chamarAPI(() =>
       fetch(`/api/pedidos/${pedidoAtivo.id}/items`, {
         method: "POST",
@@ -147,36 +239,47 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   }
 
   function removerItem(itemId: string) {
-    if (!pedidoAtivo) return;
+    if (!pedidoAtivo || !mesaEfetiva) return;
+    if (isTrainee) {
+      const novosItens = pedidoAtivo.items.filter((i) => i.id !== itemId);
+      const novoTotal = novosItens.reduce((s, i) => s + Number(i.subtotal), 0).toFixed(2);
+      atualizarSimulado({ ...mesaEfetiva, orders: [{ ...pedidoAtivo, items: novosItens, total: novoTotal }] });
+      return;
+    }
     chamarAPI(() =>
       fetch(`/api/pedidos/${pedidoAtivo.id}/items/${itemId}`, { method: "DELETE" })
     );
   }
 
   function fecharConta() {
-    if (!pedidoAtivo) return;
+    if (!pedidoAtivo || !mesaEfetiva) return;
+    if (isTrainee) { limparSimulado(mesaEfetiva.id); fecharModal(); return; }
+    const pags = buildPagamentosPayload();
     chamarAPI(() =>
       fetch(`/api/pedidos/${pedidoAtivo.id}/fechar`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formaPagamento, desconto }),
+        body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma, valor: 0 }], desconto }),
       })
     ).then(fecharModal);
   }
 
   function fecharELiberar() {
-    if (!pedidoAtivo) return;
+    if (!pedidoAtivo || !mesaEfetiva) return;
+    if (isTrainee) { limparSimulado(mesaEfetiva.id); fecharModal(); return; }
+    const pags = buildPagamentosPayload();
     chamarAPI(() =>
       fetch(`/api/pedidos/${pedidoAtivo.id}/fechar-e-liberar`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formaPagamento, desconto }),
+        body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma, valor: 0 }], desconto }),
       })
     ).then(fecharModal);
   }
 
   function liberarMesaEmergencia() {
     if (!mesaSelecionada) return;
+    if (isTrainee && mesaEfetiva) { limparSimulado(mesaEfetiva.id); fecharModal(); return; }
     chamarAPI(() =>
       fetch(`/api/mesas/${mesaSelecionada.id}/liberar`, { method: "PATCH" })
     ).then(fecharModal);
@@ -185,6 +288,12 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
   function confirmarCancelamento() {
     if (!pedidoAtivo) return;
     setShowCancelModal(false);
+    if (isTrainee && mesaEfetiva) {
+      limparSimulado(mesaEfetiva.id);
+      fecharModal();
+      setMotivoCancelamento("");
+      return;
+    }
     chamarAPI(() =>
       fetch(`/api/pedidos/${pedidoAtivo.id}`, {
         method: "DELETE",
@@ -199,8 +308,9 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
       {/* Grade de mesas: 2 colunas no mobile, 4 no tablet, 6 no desktop */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {mesas.map((mesa) => {
-          const cfg = STATUS[(mesa.status as keyof typeof STATUS) ?? "LIVRE"];
-          const pedido = mesa.orders[0];
+          const display = isTrainee && simulado[mesa.id] ? simulado[mesa.id] : mesa;
+          const cfg = STATUS[(display.status as keyof typeof STATUS) ?? "LIVRE"];
+          const pedido = display.orders[0];
           return (
             <button
               key={mesa.id}
@@ -211,7 +321,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
               <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.badge}`}>
                 {cfg.label}
               </span>
-              {pedido && (
+              {pedido && pedido.items.length > 0 && (
                 <div className="mt-2 text-xs text-slate-500">
                   {pedido.items.length} {pedido.items.length === 1 ? "item" : "itens"} · {moeda(pedido.total)}
                 </div>
@@ -253,7 +363,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
                 </button>
               </div>
 
-              {mesaSelecionada.status === "LIVRE" && (
+              {mesaEfetiva?.status === "LIVRE" && (
                 <Button onClick={abrirMesa} disabled={carregando} className="w-full py-4 text-base">
                   {carregando ? "Abrindo..." : "Abrir Mesa"}
                 </Button>
@@ -397,30 +507,69 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
                     )}
                   </div>
 
-                  {/* Forma de pagamento */}
+                  {/* Pagamento */}
                   <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Forma de pagamento</p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {PAGAMENTOS.map(({ valor, label }) => (
-                        <button
-                          key={valor}
-                          onClick={() => setFormaPagamento(valor)}
-                          className={`rounded-lg border-2 py-3 text-sm font-semibold transition-colors ${
-                            formaPagamento === valor
-                              ? "border-slate-800 bg-slate-800 text-white"
-                              : "border-slate-200 text-slate-600 hover:border-slate-400"
-                          }`}
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pagamento</p>
+
+                    {pagamentos.map((pag, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <select
+                          value={pag.forma}
+                          onChange={(e) => atualizarPagamento(i, "forma", e.target.value)}
+                          className="rounded-md border border-slate-300 bg-white px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
                         >
-                          {label}
-                        </button>
-                      ))}
+                          {PAGAMENTOS.map(({ valor, label }) => (
+                            <option key={valor} value={valor}>{label}</option>
+                          ))}
+                        </select>
+                        <div className="relative flex-1">
+                          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={pag.valor}
+                            onChange={(e) => atualizarPagamento(i, "valor", e.target.value)}
+                            className="w-full rounded-md border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                            placeholder="0,00"
+                          />
+                        </div>
+                        {pagamentos.length > 1 && (
+                          <button
+                            onClick={() => removerPagamento(i)}
+                            className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Restante */}
+                    <div className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-semibold ${
+                      Math.abs(restante) < 0.01
+                        ? "bg-green-50 text-green-700"
+                        : "bg-slate-50 text-slate-600"
+                    }`}>
+                      <span>Restante</span>
+                      <span>{restante.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                     </div>
+
+                    {/* Botão adicionar forma */}
+                    {restante > 0.005 && (
+                      <button
+                        onClick={adicionarPagamento}
+                        className="w-full rounded-md border border-dashed border-slate-300 py-2 text-sm text-slate-500 hover:border-slate-500 hover:text-slate-700 transition-colors"
+                      >
+                        + Adicionar forma de pagamento
+                      </button>
+                    )}
                   </div>
 
                   {/* Botões de ação principais — py-4 para polegar */}
                   <Button
                     onClick={fecharConta}
-                    disabled={carregando || pedidoAtivo.items.length === 0}
+                    disabled={carregando || !podeFechar}
                     variant="outline"
                     className="w-full py-4 text-base border-red-300 text-red-700 hover:bg-red-50"
                   >
@@ -429,7 +578,7 @@ export default function MesasGrid({ mesas }: { mesas: MesaComPedido[] }) {
 
                   <Button
                     onClick={fecharELiberar}
-                    disabled={carregando || pedidoAtivo.items.length === 0}
+                    disabled={carregando || !podeFechar}
                     className="w-full py-4 text-base bg-emerald-600 text-white hover:bg-emerald-700"
                   >
                     {carregando ? "Processando..." : "Fechar e Liberar Mesa"}

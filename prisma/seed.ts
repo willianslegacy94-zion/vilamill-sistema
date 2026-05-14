@@ -164,16 +164,16 @@ async function main() {
 
   // ── Usuários ───────────────────────────────────────────────────────────────
   const usuarios = [
-    { nome: "Admin",       email: "admin@villamill.com",       senha: "admin123",  role: "ADMIN" },
-    { nome: "Caixa",       email: "caixa@villamill.com",       senha: "caixa123",  role: "CAIXA" },
-    { nome: "Treinamento", email: "treinamento@villamill.com", senha: "treino123", role: "CAIXA" },
+    { nome: "Admin",       email: "admin",       senha: "admin123",  role: "ADMIN" },
+    { nome: "Caixa",       email: "caixa",       senha: "caixa123",  role: "CAIXA" },
+    { nome: "Treinamento", email: "treinamento", senha: "treino123", role: "CAIXA" },
   ] as const;
 
   for (const u of usuarios) {
     const senhaHash = await bcrypt.hash(u.senha, 10);
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
+      update: { nome: u.nome, role: u.role },
       create: { nome: u.nome, email: u.email, senhaHash, role: u.role },
     });
   }

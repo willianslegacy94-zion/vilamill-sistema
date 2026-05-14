@@ -36,7 +36,8 @@ export default async function FinanceiroPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const session = await auth();
-  if ((session?.user as any)?.role !== "ADMIN") redirect("/");
+  const isTrainee = (session?.user as any)?.isTrainee ?? false;
+  if ((session?.user as any)?.role !== "ADMIN" && !isTrainee) redirect("/");
 
   const { from: fromParam, to: toParam } = await searchParams;
 
@@ -84,12 +85,23 @@ export default async function FinanceiroPage({
   const resultado = receitaBruta - cmv - totalDespesas;
   const ticketMedio = pedidosFechados.length > 0 ? receitaBruta / pedidosFechados.length : 0;
 
+  // Distribui pagamentos por forma, incluindo split (pagamentosSplit)
+  type PagEntry = { forma: string; valor: number };
+  const todasEntradas: PagEntry[] = pedidosFechados.flatMap((p) => {
+    const split = p.pagamentosSplit as PagEntry[] | null;
+    if (split && split.length > 0) return split;
+    return [{ forma: p.formaPagamento ?? "DINHEIRO", valor: Number(p.total) }];
+  });
+  function somaForma(forma: string) {
+    return todasEntradas.filter((e) => e.forma === forma).reduce((s, e) => s + e.valor, 0);
+  }
+
   const porForma = {
-    DINHEIRO: pedidosFechados.filter((p) => p.formaPagamento === "DINHEIRO").reduce((s, p) => s + Number(p.total), 0),
-    CREDITO:  pedidosFechados.filter((p) => p.formaPagamento === "CREDITO").reduce((s, p) => s + Number(p.total), 0),
-    DEBITO:   pedidosFechados.filter((p) => p.formaPagamento === "DEBITO").reduce((s, p) => s + Number(p.total), 0),
-    PIX:      pedidosFechados.filter((p) => p.formaPagamento === "PIX").reduce((s, p) => s + Number(p.total), 0),
-    CARTAO:   pedidosFechados.filter((p) => p.formaPagamento === "CARTAO").reduce((s, p) => s + Number(p.total), 0),
+    DINHEIRO: somaForma("DINHEIRO"),
+    CREDITO:  somaForma("CREDITO"),
+    DEBITO:   somaForma("DEBITO"),
+    PIX:      somaForma("PIX"),
+    CARTAO:   somaForma("CARTAO"),
   };
 
   const labelPeriodo =

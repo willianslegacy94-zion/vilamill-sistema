@@ -21,6 +21,7 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
   const [selecionado, setSelecionado] = useState<Produto | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [form, setForm] = useState({ nome: "", categoria: "", preco: "" });
+  const [novaCategoria, setNovaCategoria] = useState(false);
 
   // Ficha técnica
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -57,6 +58,7 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
 
   function abrirNovo() {
     setForm({ nome: "", categoria: categorias[0] ?? "", preco: "" });
+    setNovaCategoria(categorias.length === 0);
     setSelecionado(null);
     setModo("novo");
   }
@@ -64,6 +66,7 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
   function abrirEditar(produto: Produto) {
     setSelecionado(produto);
     setForm({ nome: produto.nome, categoria: produto.categoria, preco: Number(produto.preco).toFixed(2) });
+    setNovaCategoria(false);
     setModo("editar");
   }
 
@@ -212,12 +215,43 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-slate-600">Categoria</label>
-                <input type="text" list="categorias-lista" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  placeholder="Ex: Carne" />
-                <datalist id="categorias-lista">
-                  {categorias.map((c) => <option key={c} value={c} />)}
-                </datalist>
+                {!novaCategoria && categorias.length > 0 ? (
+                  <select
+                    value={form.categoria}
+                    onChange={(e) => {
+                      if (e.target.value === "__nova__") {
+                        setNovaCategoria(true);
+                        setForm({ ...form, categoria: "" });
+                      } else {
+                        setForm({ ...form, categoria: e.target.value });
+                      }
+                    }}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  >
+                    {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value="__nova__">+ Nova categoria...</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={form.categoria}
+                      onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                      className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      placeholder="Nome da nova categoria"
+                      autoFocus
+                    />
+                    {categorias.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setNovaCategoria(false); setForm({ ...form, categoria: categorias[0] }); }}
+                        className="rounded-md border border-slate-300 px-2 py-2 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-slate-600">Preço (R$)</label>

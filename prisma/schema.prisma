@@ -47,16 +47,17 @@ model RecipeItem {
 }
 
 model Order {
-  id             String          @id @default(cuid())
-  mesaId         String
-  paymentStatus  PaymentStatus   @default(PENDENTE)
-  total          Decimal         @db.Decimal(10, 2)
-  desconto       Decimal         @db.Decimal(10, 2) @default(0)
-  closedAt       DateTime?
-  createdAt      DateTime        @default(now())
-  formaPagamento FormaPagamento?
-  table          Table           @relation(fields: [mesaId], references: [id])
-  items          OrderItem[]
+  id               String          @id @default(cuid())
+  mesaId           String
+  paymentStatus    PaymentStatus   @default(PENDENTE)
+  total            Decimal         @db.Decimal(10, 2)
+  desconto         Decimal         @db.Decimal(10, 2) @default(0)
+  closedAt         DateTime?
+  createdAt        DateTime        @default(now())
+  formaPagamento   FormaPagamento?
+  pagamentosSplit  Json?
+  table            Table           @relation(fields: [mesaId], references: [id])
+  items            OrderItem[]
 }
 
 model CancelamentoLog {

@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 
 export default async function DespesasPage() {
   const session = await auth();
-  if ((session?.user as any)?.role !== "ADMIN") redirect("/");
+  const role = (session?.user as any)?.role;
+  const isTrainee = (session?.user as any)?.isTrainee ?? false;
+  if (role !== "ADMIN" && !isTrainee) redirect("/");
 
   const despesas = await prisma.despesa.findMany({ orderBy: { data: "desc" } });
 
