@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documentação Técnica — Villa Mill Tamboré</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0f172a;
+    --blue:    #1d4ed8;
+    --blue-lt: #3b82f6;
+    --slate:   #1e293b;
+    --gray:    #64748b;
+    --light:   #f1f5f9;
+    --white:   #ffffff;
+    --green:   #16a34a;
+    --amber:   #d97706;
+    --red:     #dc2626;
+    --cyan:    #0891b2;
+    --purple:  #7c3aed;
+    --code-bg: #0f172a;
+    --code-fg: #e2e8f0;
+  }
+
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.65;
+    color: var(--slate);
+    background: var(--white);
+  }
+
+  /* ── CAPA ─────────────────────────────────────────── */
+  .cover {
+    background-color: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    page-break-after: always;
+    break-after: page;
+  }
+  .cover-logo {
+    width: 80px; height: 80px;
+    background-color: #1e3a5f;
+    border: 2px solid #3b82f6;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 32px;
+    font-size: 36px;
+  }
+  .cover h1 { font-size: 30pt; font-weight: 800; color: var(--white); text-align: center; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .cover h2 { font-size: 13pt; font-weight: 400; color: #94a3b8; text-align: center; margin-bottom: 40px; }
+  .cover-badge {
+    background-color: #1e3a5f;
+    border: 1px solid var(--blue-lt);
+    color: #7dd3fc;
+    padding: 6px 20px;
+    border-radius: 99px;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .cover-divider { width: 60px; height: 3px; background-color: var(--blue-lt); border-radius: 2px; margin: 28px auto; }
+  .cover-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-top: 48px;
+    width: 100%;
+    max-width: 560px;
+  }
+  .cover-stat { text-align: center; }
+  .cover-stat-val { font-size: 20pt; font-weight: 800; color: #7dd3fc; }
+  .cover-stat-lbl { font-size: 7.5pt; color: #64748b; margin-top: 2px; }
+  .cover-meta { color: #475569; font-size: 8.5pt; text-align: center; margin-top: 48px; }
+
+  /* ── ÍNDICE ───────────────────────────────────────── */
+  .toc {
+    padding: 56px 56px;
+    page-break-after: always;
+    break-after: page;
+  }
+  .toc h2 { font-size: 18pt; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .toc-subtitle { color: var(--gray); font-size: 9.5pt; margin-bottom: 28px; padding-bottom: 14px; border-bottom: 2px solid var(--light); }
+  .toc-group { margin-bottom: 24px; }
+  .toc-group-label { font-size: 8pt; font-weight: 700; letter-spacing: 1.5px; color: var(--blue-lt); text-transform: uppercase; margin-bottom: 8px; padding-left: 4px; }
+  .toc-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+  .toc-num { width: 24px; height: 24px; background-color: var(--blue); color: var(--white); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: 700; flex-shrink: 0; }
+  .toc-text { flex: 1; font-weight: 500; color: var(--slate); font-size: 9.5pt; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted #cbd5e1; height: 1px; margin: 0 8px; }
+  .toc-page { color: var(--gray); font-size: 8.5pt; font-weight: 500; }
+
+  /* ── SEÇÕES ───────────────────────────────────────── */
+  .section {
+    padding: 44px 56px 48px;
+    page-break-before: always;
+    break-before: page;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--light);
+  }
+  .section-icon {
+    width: 46px; height: 46px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .icon-blue   { background-color: #dbeafe; }
+  .icon-green  { background-color: #dcfce7; }
+  .icon-amber  { background-color: #fef3c7; }
+  .icon-red    { background-color: #fee2e2; }
+  .icon-cyan   { background-color: #cffafe; }
+  .icon-purple { background-color: #ede9fe; }
+  .icon-dark   { background-color: #1e293b; }
+
+  .section-title-wrap h2 { font-size: 15pt; font-weight: 700; color: var(--navy); line-height: 1.2; }
+  .section-title-wrap p { font-size: 9pt; color: var(--gray); margin-top: 2px; }
+
+  h3 { font-size: 11.5pt; font-weight: 700; color: var(--slate); margin: 24px 0 10px; }
+  h4 { font-size: 10pt; font-weight: 700; color: var(--blue); margin: 18px 0 7px; }
+  p  { margin-bottom: 9px; color: var(--slate); font-size: 10.5pt; }
+
+  /* ── CODE ─────────────────────────────────────────── */
+  .code-block {
+    background-color: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.5pt;
+    line-height: 1.7;
+    margin: 14px 0;
+    overflow: hidden;
+    border-left: 3px solid var(--blue-lt);
+  }
+  .code-block .cm  { color: #64748b; }
+  .code-block .kw  { color: #7dd3fc; }
+  .code-block .str { color: #86efac; }
+  .code-block .fn  { color: #fde68a; }
+  .code-block .num { color: #f9a8d4; }
+  .code-block .op  { color: #94a3b8; }
+  .code-label {
+    background-color: #1e3a5f;
+    color: #7dd3fc;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+    border-radius: 4px 4px 0 0;
+    display: inline-block;
+    margin-bottom: -4px;
+    font-family: 'Consolas', monospace;
+  }
+
+  pre { font-family: 'Consolas', 'Courier New', monospace; }
+
+  .inline-code {
+    background-color: #1e293b;
+    color: #7dd3fc;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 8.5pt;
+  }
+
+  /* ── TABLE ────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 9.5pt; }
+  th { background-color: var(--navy); color: var(--white); padding: 9px 12px; text-align: left; font-weight: 600; font-size: 8.5pt; letter-spacing: 0.3px; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: var(--slate); vertical-align: top; }
+  tr:nth-child(even) td { background-color: var(--light); }
+
+  /* ── CARDS ────────────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .cards-3 { grid-template-columns: repeat(3, 1fr); }
+  .card { background-color: var(--light); border-radius: 8px; padding: 14px; border-left: 4px solid var(--blue); }
+  .card.green  { border-left-color: var(--green); }
+  .card.amber  { border-left-color: var(--amber); }
+  .card.red    { border-left-color: var(--red); }
+  .card.cyan   { border-left-color: var(--cyan); }
+  .card.purple { border-left-color: var(--purple); }
+  .card.dark   { border-left-color: var(--slate); background-color: #f8fafc; }
+  .card-title  { font-weight: 700; font-size: 9.5pt; color: var(--navy); margin-bottom: 5px; }
+  .card p      { font-size: 9pt; margin: 0; color: var(--gray); }
+
+  /* ── ALERTS ───────────────────────────────────────── */
+  .alert { border-radius: 8px; padding: 12px 16px; margin: 14px 0; display: flex; gap: 12px; align-items: flex-start; }
+  .alert-info    { background-color: #dbeafe; border-left: 4px solid var(--blue-lt); }
+  .alert-warn    { background-color: #fef3c7; border-left: 4px solid var(--amber); }
+  .alert-success { background-color: #dcfce7; border-left: 4px solid var(--green); }
+  .alert-danger  { background-color: #fee2e2; border-left: 4px solid var(--red); }
+  .alert-dark    { background-color: #f1f5f9; border-left: 4px solid var(--slate); }
+  .alert-icon    { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .alert-text    { font-size: 9.5pt; }
+  .alert-text strong { display: block; margin-bottom: 2px; font-size: 10pt; }
+
+  /* ── HIGHLIGHT ────────────────────────────────────── */
+  .highlight { background-color: var(--navy); color: var(--white); border-radius: 10px; padding: 18px 22px; margin: 18px 0; }
+  .highlight h4 { color: #7dd3fc; margin-top: 0; font-size: 10pt; }
+  .highlight p  { color: #cbd5e1; font-size: 9.5pt; margin: 0; }
+
+  /* ── FLOW ─────────────────────────────────────────── */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .flow-box {
+    background-color: var(--blue);
+    color: var(--white);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 9pt;
+    font-weight: 600;
+  }
+  .flow-box.gray   { background-color: var(--gray); }
+  .flow-box.green  { background-color: var(--green); }
+  .flow-box.amber  { background-color: var(--amber); }
+  .flow-box.red    { background-color: var(--red); }
+  .flow-box.purple { background-color: var(--purple); }
+  .flow-arrow      { color: var(--gray); font-size: 14px; font-weight: 700; }
+
+  /* ── BADGE ────────────────────────────────────────── */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 8pt; font-weight: 700; }
+  .badge-blue   { background-color: #dbeafe; color: #1e40af; }
+  .badge-green  { background-color: #dcfce7; color: #166534; }
+  .badge-amber  { background-color: #fef3c7; color: #92400e; }
+  .badge-red    { background-color: #fee2e2; color: #991b1b; }
+  .badge-gray   { background-color: var(--light); color: var(--gray); }
+  .badge-purple { background-color: #ede9fe; color: #5b21b6; }
+
+  /* ── STEPS ────────────────────────────────────────── */
+  .steps { margin: 14px 0; }
+  .step { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .step-num { width: 24px; height: 24px; background-color: var(--blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8.5pt; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .step-body { flex: 1; }
+  .step-body strong { display: block; font-size: 10pt; color: var(--navy); margin-bottom: 2px; }
+  .step-body span { font-size: 9pt; color: var(--gray); }
+
+  ul, ol { padding-left: 18px; margin: 9px 0; }
+  li { margin-bottom: 5px; font-size: 9.5pt; color: var(--slate); }
+  li strong { color: var(--navy); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .schema-box { background-color: #0f172a; border-radius: 8px; padding: 14px 16px; border: 1px solid #1e3a5f; }
+  .schema-box .model { color: #7dd3fc; font-weight: 700; font-size: 9.5pt; font-family: monospace; margin-bottom: 8px; }
+  .schema-box .field { font-family: monospace; font-size: 8.5pt; color: #94a3b8; line-height: 1.8; }
+  .schema-box .field .fname { color: #e2e8f0; }
+  .schema-box .field .ftype { color: #86efac; }
+  .schema-box .field .fmod  { color: #fde68a; }
+
+  .env-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+  .env-key { font-family: monospace; font-size: 9pt; color: var(--blue); font-weight: 700; width: 220px; flex-shrink: 0; }
+  .env-desc { font-size: 9pt; color: var(--gray); flex: 1; }
+  .env-req { font-size: 7.5pt; font-weight: 700; padding: 2px 7px; border-radius: 99px; flex-shrink: 0; }
+  .env-obr { background-color: #fee2e2; color: #991b1b; }
+  .env-opc { background-color: #f1f5f9; color: #64748b; }
+
+  @page { margin: 0; size: A4; }
+  @media print { body { font-size: 10pt; } .section { padding: 34px 46px 46px; } }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     CAPA
+═══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">⚙️</div>
+  <h1>Villa Mill Tamboré</h1>
+  <h2>Sistema de Gestão PDV — Documentação Técnica</h2>
+  <div class="cover-divider"></div>
+  <div class="cover-badge">MANUAL DE SUPORTE TÉCNICO</div>
+  <p style="color:#64748b;font-size:9.5pt;margin-top:14px;">Arquitetura, banco de dados, configuração e resolução de problemas</p>
+  <div class="cover-grid">
+    <div class="cover-stat"><div class="cover-stat-val">Next.js</div><div class="cover-stat-lbl">Framework</div></div>
+    <div class="cover-stat"><div class="cover-stat-val">Prisma</div><div class="cover-stat-lbl">ORM</div></div>
+    <div class="cover-stat"><div class="cover-stat-val">Postgres</div><div class="cover-stat-lbl">Banco de dados</div></div>
+    <div class="cover-stat"><div class="cover-stat-val">JWT</div><div class="cover-stat-lbl">Autenticação</div></div>
+  </div>
+  <div class="cover-meta">Versão 1.3 &nbsp;·&nbsp; Maio 2026 &nbsp;·&nbsp; Uso interno — Confidencial</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ÍNDICE
+═══════════════════════════════════════════════════════════ -->
+<div class="toc">
+  <h2>Sumário</h2>
+  <p class="toc-subtitle">Documentação para suporte, manutenção e desenvolvimento</p>
+
+  <div class="toc-group">
+    <div class="toc-group-label">Infraestrutura</div>
+    <div class="toc-item"><div class="toc-num">1</div><div class="toc-text">Stack Tecnológica e Visão Geral</div><div class="toc-dots"></div><div class="toc-page">3</div></div>
+    <div class="toc-item"><div class="toc-num">2</div><div class="toc-text">Estrutura de Arquivos e Diretórios</div><div class="toc-dots"></div><div class="toc-page">4</div></div>
+    <div class="toc-item"><div class="toc-num">3</div><div class="toc-text">Variáveis de Ambiente e Configuração</div><div class="toc-dots"></div><div class="toc-page">5</div></div>
+  </div>
+
+  <div class="toc-group">
+    <div class="toc-group-label">Banco de Dados</div>
+    <div class="toc-item"><div class="toc-num">4</div><div class="toc-text">Schema Prisma — Modelos e Relacionamentos</div><div class="toc-dots"></div><div class="toc-page">6</div></div>
+    <div class="toc-item"><div class="toc-num">5</div><div class="toc-text">Migrations e Seeds</div><div class="toc-dots"></div><div class="toc-page">8</div></div>
+  </div>
+
+  <div class="toc-group">
+    <div class="toc-group-label">Aplicação</div>
+    <div class="toc-item"><div class="toc-num">6</div><div class="toc-text">Autenticação e Controle de Acesso</div><div class="toc-dots"></div><div class="toc-page">9</div></div>
+    <div class="toc-item"><div class="toc-num">7</div><div class="toc-text">API Routes — Referência Completa</div><div class="toc-dots"></div><div class="toc-page">10</div></div>
+    <div class="toc-item"><div class="toc-num">8</div><div class="toc-text">Modo Treinamento — Implementação</div><div class="toc-dots"></div><div class="toc-page">12</div></div>
+    <div class="toc-item"><div class="toc-num">9</div><div class="toc-text">Lógica de Pagamento Split</div><div class="toc-dots"></div><div class="toc-page">13</div></div>
+  </div>
+
+  <div class="toc-group">
+    <div class="toc-group-label">Operação e Suporte</div>
+    <div class="toc-item"><div class="toc-num">10</div><div class="toc-text">Deploy e Execução</div><div class="toc-dots"></div><div class="toc-page">14</div></div>
+    <div class="toc-item"><div class="toc-num">11</div><div class="toc-text">Gestão de Usuários</div><div class="toc-dots"></div><div class="toc-page">15</div></div>
+    <div class="toc-item"><div class="toc-num">12</div><div class="toc-text">Resolução de Problemas (Troubleshooting)</div><div class="toc-dots"></div><div class="toc-page">16</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     1 — STACK TECNOLÓGICA
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-blue">🏗</div>
+    <div class="section-title-wrap">
+      <h2>1. Stack Tecnológica e Visão Geral</h2>
+      <p>Tecnologias utilizadas e arquitetura do sistema</p>
+    </div>
+  </div>
+
+  <div class="cards cards-3">
+    <div class="card">
+      <div class="card-title">Next.js 15</div>
+      <p>App Router, Server Components, API Routes. React 19. TypeScript estrito.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">PostgreSQL + Prisma</div>
+      <p>ORM com type-safety. Migrations versionadas. Schema declarativo.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">NextAuth.js v5</div>
+      <p>Credentials provider. JWT com claims customizados (role, isTrainee).</p>
+    </div>
+    <div class="card cyan">
+      <div class="card-title">Tailwind CSS 4</div>
+      <p>Utilitários CSS. Tema configurado em CSS vars. Build otimizado.</p>
+    </div>
+    <div class="card purple">
+      <div class="card-title">Bcrypt</div>
+      <p>Hash de senhas com salt. Nenhuma senha armazenada em texto plano.</p>
+    </div>
+    <div class="card dark">
+      <div class="card-title">Yarn</div>
+      <p>Gerenciador de pacotes. Lockfile versionado no repositório.</p>
+    </div>
+  </div>
+
+  <h3>Fluxo de Request</h3>
+  <div class="flow">
+    <div class="flow-box gray">Browser</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Middleware (auth + trainee)</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box amber">Next.js Server</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box green">Prisma ORM</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box purple">PostgreSQL</div>
+  </div>
+
+  <h3>Padrão de renderização</h3>
+  <ul>
+    <li><strong>Server Components:</strong> todas as páginas (pages) buscam dados diretamente via Prisma — sem fetch client-side para dados iniciais.</li>
+    <li><strong>Client Components:</strong> grids interativos (mesas, produtos, estoque) marcados com <span class="inline-code">"use client"</span>.</li>
+    <li><strong>API Routes:</strong> endpoints em <span class="inline-code">src/app/api/</span> para todas as mutações.</li>
+    <li><strong>force-dynamic:</strong> páginas com dados em tempo real usam <span class="inline-code">export const dynamic = "force-dynamic"</span> para evitar cache.</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     2 — ESTRUTURA DE ARQUIVOS
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-amber">📁</div>
+    <div class="section-title-wrap">
+      <h2>2. Estrutura de Arquivos e Diretórios</h2>
+      <p>Mapa do repositório e responsabilidade de cada pasta</p>
+    </div>
+  </div>
+
+  <div class="code-block">
+<pre>vilamill-sistema/
+├── <span class="kw">prisma/</span>
+│   ├── schema.prisma          <span class="cm"># Modelos do banco de dados</span>
+│   ├── seed.ts                <span class="cm"># Seed de usuários iniciais</span>
+│   └── migrations/            <span class="cm"># Histórico de migrations SQL</span>
+│
+├── <span class="kw">src/</span>
+│   ├── <span class="fn">auth.ts</span>               <span class="cm"># Configuração NextAuth (providers, callbacks)</span>
+│   ├── <span class="fn">middleware.ts</span>          <span class="cm"># Proteção de rotas + intercepção trainee</span>
+│   │
+│   ├── <span class="kw">app/</span>
+│   │   ├── <span class="fn">layout.tsx</span>         <span class="cm"># Layout raiz (SessionProvider, Navbar)</span>
+│   │   ├── <span class="fn">page.tsx</span>           <span class="cm"># Dashboard / Home</span>
+│   │   ├── <span class="fn">login/page.tsx</span>     <span class="cm"># Tela de login</span>
+│   │   │
+│   │   ├── <span class="kw">mesas/</span>
+│   │   │   ├── page.tsx       <span class="cm"># Server: busca mesas + products do DB</span>
+│   │   │   └── mesas-grid.tsx <span class="cm"># Client: grid, modal, simulação trainee</span>
+│   │   │
+│   │   ├── <span class="kw">produtos/</span>
+│   │   │   ├── page.tsx
+│   │   │   └── produtos-table.tsx
+│   │   │
+│   │   ├── <span class="kw">estoque/</span>
+│   │   │   ├── page.tsx
+│   │   │   └── estoque-table.tsx
+│   │   │
+│   │   ├── <span class="kw">despesas/</span>page.tsx
+│   │   ├── <span class="kw">financeiro/</span>page.tsx
+│   │   ├── <span class="kw">comanda/[id]/</span>page.tsx <span class="cm"># Ticket de impressão</span>
+│   │   │
+│   │   └── <span class="kw">api/</span>
+│   │       ├── auth/[...nextauth]/route.ts
+│   │       ├── pedidos/
+│   │       │   ├── route.ts                  <span class="cm"># POST criar pedido</span>
+│   │       │   └── [id]/
+│   │       │       ├── items/route.ts         <span class="cm"># POST adicionar item</span>
+│   │       │       ├── items/[itemId]/route.ts<span class="cm"># DELETE remover item</span>
+│   │       │       ├── fechar/route.ts        <span class="cm"># PATCH fechar conta</span>
+│   │       │       ├── fechar-e-liberar/route.ts
+│   │       │       └── route.ts              <span class="cm"># DELETE cancelar</span>
+│   │       ├── mesas/[id]/liberar/route.ts   <span class="cm"># PATCH emergência</span>
+│   │       ├── produtos/
+│   │       │   ├── route.ts
+│   │       │   └── [id]/
+│   │       │       ├── route.ts
+│   │       │       └── receita/
+│   │       │           ├── route.ts
+│   │       │           └── [itemId]/route.ts
+│   │       ├── insumos/
+│   │       │   ├── route.ts
+│   │       │   └── [id]/route.ts
+│   │       └── despesas/
+│   │           ├── route.ts
+│   │           └── [id]/route.ts
+│   │
+│   └── <span class="kw">services/</span>
+│       ├── prisma.ts          <span class="cm"># Singleton PrismaClient</span>
+│       └── api.ts             <span class="cm"># chamarAPI() helper client-side</span>
+│
+├── <span class="fn">docs/</span>                    <span class="cm"># Esta documentação</span>
+├── <span class="fn">.env</span>                     <span class="cm"># Variáveis de ambiente (não versionado)</span>
+├── <span class="fn">package.json</span>
+└── <span class="fn">yarn.lock</span></pre>
+  </div>
+
+  <div class="alert alert-warn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <strong>Arquivo .env nunca deve ser commitado</strong>
+      Ele contém credenciais do banco e o segredo JWT. Está listado no <span class="inline-code">.gitignore</span>. Sempre configure manualmente no servidor de produção.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     3 — VARIÁVEIS DE AMBIENTE
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-red">🔐</div>
+    <div class="section-title-wrap">
+      <h2>3. Variáveis de Ambiente e Configuração</h2>
+      <p>Todas as variáveis necessárias para rodar o sistema</p>
+    </div>
+  </div>
+
+  <p>Crie um arquivo <span class="inline-code">.env</span> na raiz do projeto com as variáveis abaixo:</p>
+
+  <div class="code-label">arquivo: .env</div>
+  <div class="code-block">
+<pre><span class="cm"># Banco de dados PostgreSQL</span>
+<span class="kw">DATABASE_URL</span>=<span class="str">"postgresql://USER:PASSWORD@HOST:5432/vilamill?schema=public"</span>
+
+<span class="cm"># NextAuth — gere com: openssl rand -base64 32</span>
+<span class="kw">AUTH_SECRET</span>=<span class="str">"sua-chave-secreta-aleatoria-aqui"</span>
+
+<span class="cm"># URL base do sistema em produção</span>
+<span class="kw">NEXTAUTH_URL</span>=<span class="str">"https://seu-dominio.com"</span></pre>
+  </div>
+
+  <div class="env-row">
+    <div class="env-key">DATABASE_URL</div>
+    <div class="env-desc">String de conexão Prisma. Formato: <span class="inline-code">postgresql://USER:PASS@HOST:PORT/DB</span></div>
+    <div class="env-req env-obr">Obrigatório</div>
+  </div>
+  <div class="env-row">
+    <div class="env-key">AUTH_SECRET</div>
+    <div class="env-desc">Chave para assinar os tokens JWT. Mínimo 32 chars aleatórios. Trocar invalida todas as sessões ativas.</div>
+    <div class="env-req env-obr">Obrigatório</div>
+  </div>
+  <div class="env-row">
+    <div class="env-key">NEXTAUTH_URL</div>
+    <div class="env-desc">URL pública do sistema. Necessário em produção para callbacks de auth funcionarem corretamente.</div>
+    <div class="env-req env-opc">Produção</div>
+  </div>
+
+  <h3>Gerar AUTH_SECRET</h3>
+  <div class="code-block">
+<pre><span class="cm"># Linux / Mac</span>
+<span class="fn">openssl</span> rand -base64 32
+
+<span class="cm"># Node.js (qualquer SO)</span>
+<span class="fn">node</span> -e <span class="str">"console.log(require('crypto').randomBytes(32).toString('base64'))"</span></pre>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     4 — SCHEMA PRISMA
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-purple">🗄</div>
+    <div class="section-title-wrap">
+      <h2>4. Schema Prisma — Modelos e Relacionamentos</h2>
+      <p>Estrutura completa do banco de dados</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="schema-box">
+        <div class="model">model Table (Mesa)</div>
+        <div class="field">
+          <span class="fname">id</span>      <span class="ftype">String</span>  <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">numero</span>  <span class="ftype">Int</span>     <span class="fmod">@unique</span><br>
+          <span class="fname">status</span>  <span class="ftype">TableStatus</span> <span class="fmod">@default(LIVRE)</span><br>
+          <span class="fname">orders</span>  <span class="ftype">Order[]</span>
+        </div>
+      </div>
+      <div class="schema-box" style="margin-top:10px;">
+        <div class="model">model Order (Pedido)</div>
+        <div class="field">
+          <span class="fname">id</span>              <span class="ftype">String</span>   <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">mesaId</span>          <span class="ftype">String</span><br>
+          <span class="fname">paymentStatus</span>   <span class="ftype">PaymentStatus</span> <span class="fmod">@default(PENDENTE)</span><br>
+          <span class="fname">total</span>           <span class="ftype">Decimal</span>  <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="fname">desconto</span>        <span class="ftype">Decimal</span>  <span class="fmod">@db.Decimal(10,2) @default(0)</span><br>
+          <span class="fname">closedAt</span>        <span class="ftype">DateTime?</span><br>
+          <span class="fname">createdAt</span>       <span class="ftype">DateTime</span> <span class="fmod">@default(now())</span><br>
+          <span class="fname">formaPagamento</span>  <span class="ftype">FormaPagamento?</span><br>
+          <span class="fname">pagamentosSplit</span> <span class="ftype">Json?</span>  <span class="cm">// split payments array</span><br>
+          <span class="fname">table</span>           <span class="ftype">Table</span>    <span class="fmod">@relation(...)</span><br>
+          <span class="fname">items</span>           <span class="ftype">OrderItem[]</span>
+        </div>
+      </div>
+      <div class="schema-box" style="margin-top:10px;">
+        <div class="model">model OrderItem</div>
+        <div class="field">
+          <span class="fname">id</span>         <span class="ftype">String</span>  <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">orderId</span>    <span class="ftype">String</span><br>
+          <span class="fname">productId</span>  <span class="ftype">String</span><br>
+          <span class="fname">quantidade</span> <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,3)</span><br>
+          <span class="fname">precoUnit</span>  <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="fname">custoUnit</span>  <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="fname">subtotal</span>   <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="cm">@@unique([orderId, productId])</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="schema-box">
+        <div class="model">model Product (Produto)</div>
+        <div class="field">
+          <span class="fname">id</span>              <span class="ftype">String</span>  <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">nome</span>            <span class="ftype">String</span><br>
+          <span class="fname">preco</span>           <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="fname">costPrice</span>       <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="fname">categoria</span>       <span class="ftype">String</span><br>
+          <span class="fname">track_inventory</span> <span class="ftype">Boolean</span> <span class="fmod">@default(false)</span><br>
+          <span class="fname">estoque</span>         <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,3)</span><br>
+          <span class="fname">orderItems</span>      <span class="ftype">OrderItem[]</span><br>
+          <span class="fname">recipeItems</span>     <span class="ftype">RecipeItem[]</span>
+        </div>
+      </div>
+      <div class="schema-box" style="margin-top:10px;">
+        <div class="model">model Ingredient (Insumo)</div>
+        <div class="field">
+          <span class="fname">id</span>               <span class="ftype">String</span>  <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">nome</span>             <span class="ftype">String</span><br>
+          <span class="fname">unidade</span>          <span class="ftype">Unidade</span> <span class="cm">// KG | UN | L</span><br>
+          <span class="fname">quantidadeAtual</span>  <span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,3)</span><br>
+          <span class="fname">nivelMinimoAlerta</span><span class="ftype">Decimal</span> <span class="fmod">@db.Decimal(10,3)</span><br>
+          <span class="fname">recipeItems</span>      <span class="ftype">RecipeItem[]</span>
+        </div>
+      </div>
+      <div class="schema-box" style="margin-top:10px;">
+        <div class="model">model User (Usuário)</div>
+        <div class="field">
+          <span class="fname">id</span>        <span class="ftype">String</span> <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">nome</span>      <span class="ftype">String</span><br>
+          <span class="fname">email</span>     <span class="ftype">String</span> <span class="fmod">@unique</span> <span class="cm">// usado como username</span><br>
+          <span class="fname">senhaHash</span> <span class="ftype">String</span> <span class="cm">// bcrypt</span><br>
+          <span class="fname">role</span>      <span class="ftype">Role</span>   <span class="fmod">@default(CAIXA)</span>
+        </div>
+      </div>
+      <div class="schema-box" style="margin-top:10px;">
+        <div class="model">model Despesa</div>
+        <div class="field">
+          <span class="fname">id</span>           <span class="ftype">String</span>   <span class="fmod">@id @default(cuid())</span><br>
+          <span class="fname">descricao</span>    <span class="ftype">String</span><br>
+          <span class="fname">valor</span>        <span class="ftype">Decimal</span>  <span class="fmod">@db.Decimal(10,2)</span><br>
+          <span class="fname">categoria</span>    <span class="ftype">String</span><br>
+          <span class="fname">data</span>         <span class="ftype">DateTime</span><br>
+          <span class="fname">registradoPor</span><span class="ftype">String</span><br>
+          <span class="fname">createdAt</span>    <span class="ftype">DateTime</span> <span class="fmod">@default(now())</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Enums do banco</h3>
+  <table>
+    <thead><tr><th>Enum</th><th>Valores</th><th>Uso</th></tr></thead>
+    <tbody>
+      <tr><td><strong>TableStatus</strong></td><td>LIVRE · OCUPADA · CONTA</td><td>Status de cada mesa</td></tr>
+      <tr><td><strong>PaymentStatus</strong></td><td>PENDENTE · PAGO</td><td>Status do pedido</td></tr>
+      <tr><td><strong>FormaPagamento</strong></td><td>DINHEIRO · CARTAO · CREDITO · DEBITO · PIX</td><td>Forma principal de pagamento</td></tr>
+      <tr><td><strong>Role</strong></td><td>ADMIN · CAIXA</td><td>Perfil do usuário</td></tr>
+      <tr><td><strong>Unidade</strong></td><td>KG · UN · L</td><td>Unidade de medida do insumo</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     5 — MIGRATIONS E SEEDS
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-green">🔄</div>
+    <div class="section-title-wrap">
+      <h2>5. Migrations e Seeds</h2>
+      <p>Gerenciamento de versões do banco de dados</p>
+    </div>
+  </div>
+
+  <h3>Comandos Prisma essenciais</h3>
+  <div class="code-block">
+<pre><span class="cm"># Criar nova migration (após alterar schema.prisma)</span>
+<span class="fn">npx prisma migrate dev</span> --name nome_da_migration
+
+<span class="cm"># Aplicar migrations em produção (sem criar nova)</span>
+<span class="fn">npx prisma migrate deploy</span>
+
+<span class="cm"># Regenerar o Prisma Client (após qualquer alteração no schema)</span>
+<span class="fn">npx prisma generate</span>
+
+<span class="cm"># Rodar seed (criar usuários padrão)</span>
+<span class="fn">npx prisma db seed</span>
+
+<span class="cm"># Abrir o Prisma Studio (visualizar dados no navegador)</span>
+<span class="fn">npx prisma studio</span>
+
+<span class="cm"># Resetar banco completamente (CUIDADO — apaga todos os dados)</span>
+<span class="fn">npx prisma migrate reset</span></pre>
+  </div>
+
+  <h3>Usuários criados pelo seed</h3>
+  <table>
+    <thead><tr><th>Usuário (email/login)</th><th>Nome</th><th>Role</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td><span class="inline-code">admin</span></td><td>Administrador</td><td><span class="badge badge-red">ADMIN</span></td><td>Acesso completo</td></tr>
+      <tr><td><span class="inline-code">caixa</span></td><td>Caixa</td><td><span class="badge badge-blue">CAIXA</span></td><td>Operação de mesas e estoque</td></tr>
+      <tr><td><span class="inline-code">treinamento</span></td><td>Treinamento</td><td><span class="badge badge-blue">CAIXA</span></td><td>isTrainee=true na sessão — sem escrita no DB</td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-info">
+    <div class="alert-icon">ℹ️</div>
+    <div class="alert-text">
+      <strong>Como o seed detecta treinamento</strong>
+      O usuário "treinamento" tem <span class="inline-code">role: CAIXA</span> no banco. A flag <span class="inline-code">isTrainee</span> é setada em <span class="inline-code">src/auth.ts</span> verificando se <span class="inline-code">token.email === "treinamento"</span> no callback JWT.
+    </div>
+  </div>
+
+  <h3>Migrations existentes</h3>
+  <table>
+    <thead><tr><th>Migration</th><th>O que fez</th></tr></thead>
+    <tbody>
+      <tr><td><span class="inline-code">..._init</span></td><td>Criação de todas as tabelas iniciais</td></tr>
+      <tr><td><span class="inline-code">..._add_despesas</span></td><td>Adicionou o model Despesa</td></tr>
+      <tr><td><span class="inline-code">20260514000000_add_pagamentos_split</span></td><td>Adicionou coluna <span class="inline-code">pagamentosSplit JSONB</span> na tabela Order</td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-danger">
+    <div class="alert-icon">🚨</div>
+    <div class="alert-text">
+      <strong>EPERM ao rodar prisma generate no Windows</strong>
+      Se o servidor dev estiver rodando, o arquivo DLL do query engine fica bloqueado. Solução: pare todos os processos node (<span class="inline-code">Stop-Process -Name node -Force</span> no PowerShell), rode <span class="inline-code">prisma generate</span>, depois reinicie o servidor.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     6 — AUTENTICAÇÃO
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-red">🔒</div>
+    <div class="section-title-wrap">
+      <h2>6. Autenticação e Controle de Acesso</h2>
+      <p>NextAuth, JWT, middleware e proteção de rotas</p>
+    </div>
+  </div>
+
+  <h3>Fluxo de autenticação</h3>
+  <div class="flow">
+    <div class="flow-box gray">POST /api/auth/signin</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Credentials Provider</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box green">bcrypt.compare()</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box amber">JWT callback</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box purple">Session cookie</div>
+  </div>
+
+  <h3>Callbacks em src/auth.ts</h3>
+  <div class="code-label">src/auth.ts — JWT callback</div>
+  <div class="code-block">
+<pre><span class="kw">jwt</span>: <span class="kw">async</span> ({ token, user }) => {
+  <span class="kw">if</span> (user) {
+    token.role      = (user <span class="kw">as any</span>).role;
+    token.isTrainee = (user <span class="kw">as any</span>).email === <span class="str">"treinamento"</span>;
+  }
+  <span class="kw">return</span> token;
+},
+<span class="kw">session</span>: <span class="kw">async</span> ({ session, token }) => {
+  (session.user <span class="kw">as any</span>).role      = token.role;
+  (session.user <span class="kw">as any</span>).isTrainee = token.isTrainee;
+  <span class="kw">return</span> session;
+}</pre>
+  </div>
+
+  <h3>Middleware de proteção (src/middleware.ts)</h3>
+  <p>O middleware é executado em <strong>todas as requisições</strong> antes do handler. Ele realiza 3 funções:</p>
+
+  <div class="cards">
+    <div class="card red">
+      <div class="card-title">1. Redirecionar não autenticados</div>
+      <p>Qualquer rota não pública sem sessão válida → redirect para <span class="inline-code">/login</span>.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">2. Restringir Caixa</div>
+      <p>Role CAIXA só acessa <span class="inline-code">/</span>, <span class="inline-code">/mesas</span>, <span class="inline-code">/produtos</span>, <span class="inline-code">/estoque</span>. Demais → redirect.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">3. Interceptar Trainee</div>
+      <p>Se <span class="inline-code">isTrainee=true</span> e método ≠ GET → retorna <span class="inline-code">&#123; ok: true, _treinamento: true &#125;</span> sem chegar ao banco.</p>
+    </div>
+  </div>
+
+  <div class="code-label">src/middleware.ts — intercepção trainee</div>
+  <div class="code-block">
+<pre><span class="kw">const</span> isTrainee = token?.isTrainee === <span class="kw">true</span>;
+<span class="kw">const</span> isApi     = req.nextUrl.pathname.startsWith(<span class="str">"/api"</span>);
+<span class="kw">const</span> method    = req.method;
+
+<span class="kw">if</span> (isTrainee && isApi && method !== <span class="str">"GET"</span>) {
+  <span class="kw">return</span> NextResponse.json({ ok: <span class="kw">true</span>, _treinamento: <span class="kw">true</span> });
+}</pre>
+  </div>
+
+  <h3>Como trocar a senha de um usuário</h3>
+  <p>Não há tela de troca de senha. Use o Prisma Studio ou um script Node:</p>
+  <div class="code-label">script: reset-senha.ts</div>
+  <div class="code-block">
+<pre><span class="kw">import</span> { PrismaClient } <span class="kw">from</span> <span class="str">"@prisma/client"</span>;
+<span class="kw">import</span> bcrypt <span class="kw">from</span> <span class="str">"bcryptjs"</span>;
+
+<span class="kw">const</span> prisma = <span class="kw">new</span> PrismaClient();
+<span class="kw">const</span> hash = <span class="kw">await</span> bcrypt.hash(<span class="str">"NOVA_SENHA"</span>, <span class="num">12</span>);
+<span class="kw">await</span> prisma.user.update({
+  <span class="kw">where</span>: { email: <span class="str">"admin"</span> },
+  <span class="kw">data</span>:  { senhaHash: hash },
+});
+<span class="kw">await</span> prisma.$disconnect();</pre>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     7 — API ROUTES
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-cyan">🔌</div>
+    <div class="section-title-wrap">
+      <h2>7. API Routes — Referência Completa</h2>
+      <p>Todos os endpoints da aplicação, seus métodos e payloads</p>
+    </div>
+  </div>
+
+  <h3>Pedidos (Orders)</h3>
+  <table>
+    <thead><tr><th>Método</th><th>Rota</th><th>Body / Params</th><th>Descrição</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-green">POST</span></td>
+        <td><span class="inline-code">/api/pedidos</span></td>
+        <td><span class="inline-code">{ mesaId }</span></td>
+        <td>Cria pedido e muda mesa para OCUPADA</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">POST</span></td>
+        <td><span class="inline-code">/api/pedidos/[id]/items</span></td>
+        <td><span class="inline-code">{ productId, quantidade }</span></td>
+        <td>Adiciona item. Se já existe, incrementa quantidade via upsert</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">DELETE</span></td>
+        <td><span class="inline-code">/api/pedidos/[id]/items/[itemId]</span></td>
+        <td>—</td>
+        <td>Remove item do pedido e recalcula total</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-amber">PATCH</span></td>
+        <td><span class="inline-code">/api/pedidos/[id]/fechar</span></td>
+        <td><span class="inline-code">{ pagamentos[], desconto }</span></td>
+        <td>Fecha conta. Mesa permanece OCUPADA</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-amber">PATCH</span></td>
+        <td><span class="inline-code">/api/pedidos/[id]/fechar-e-liberar</span></td>
+        <td><span class="inline-code">{ pagamentos[], desconto }</span></td>
+        <td>Fecha conta e libera mesa (LIVRE)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">DELETE</span></td>
+        <td><span class="inline-code">/api/pedidos/[id]</span></td>
+        <td><span class="inline-code">{ motivoCancelamento, canceladoPor }</span></td>
+        <td>Cancela pedido e grava CancelamentoLog</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Formato do payload de pagamento</h4>
+  <div class="code-block">
+<pre><span class="cm">// Formato novo (split payment)</span>
+{
+  <span class="str">"pagamentos"</span>: [
+    { <span class="str">"forma"</span>: <span class="str">"DINHEIRO"</span>, <span class="str">"valor"</span>: <span class="num">50.00</span> },
+    { <span class="str">"forma"</span>: <span class="str">"PIX"</span>,      <span class="str">"valor"</span>: <span class="num">70.00</span> }
+  ],
+  <span class="str">"desconto"</span>: <span class="num">0</span>
+}
+
+<span class="cm">// Formato legado (compatível)</span>
+{ <span class="str">"formaPagamento"</span>: <span class="str">"DINHEIRO"</span>, <span class="str">"desconto"</span>: <span class="num">10</span> }</pre>
+  </div>
+
+  <h3>Mesas</h3>
+  <table>
+    <thead><tr><th>Método</th><th>Rota</th><th>Descrição</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-amber">PATCH</span></td><td><span class="inline-code">/api/mesas/[id]/liberar</span></td><td>Libera mesa de emergência sem fechar pedido</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Produtos</h3>
+  <table>
+    <thead><tr><th>Método</th><th>Rota</th><th>Descrição</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-blue">GET</span></td><td><span class="inline-code">/api/produtos</span></td><td>Lista todos os produtos</td></tr>
+      <tr><td><span class="badge badge-green">POST</span></td><td><span class="inline-code">/api/produtos</span></td><td>Cria produto</td></tr>
+      <tr><td><span class="badge badge-amber">PATCH</span></td><td><span class="inline-code">/api/produtos/[id]</span></td><td>Edita produto</td></tr>
+      <tr><td><span class="badge badge-red">DELETE</span></td><td><span class="inline-code">/api/produtos/[id]</span></td><td>Remove produto</td></tr>
+      <tr><td><span class="badge badge-blue">GET</span></td><td><span class="inline-code">/api/produtos/[id]/receita</span></td><td>Busca ficha técnica do produto</td></tr>
+      <tr><td><span class="badge badge-green">POST</span></td><td><span class="inline-code">/api/produtos/[id]/receita</span></td><td>Adiciona ingrediente à receita</td></tr>
+      <tr><td><span class="badge badge-red">DELETE</span></td><td><span class="inline-code">/api/produtos/[id]/receita/[itemId]</span></td><td>Remove ingrediente da receita</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Insumos (Estoque) e Despesas</h3>
+  <table>
+    <thead><tr><th>Método</th><th>Rota</th><th>Descrição</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-blue">GET</span></td><td><span class="inline-code">/api/insumos</span></td><td>Lista todos os insumos</td></tr>
+      <tr><td><span class="badge badge-green">POST</span></td><td><span class="inline-code">/api/insumos</span></td><td>Cria insumo</td></tr>
+      <tr><td><span class="badge badge-amber">PATCH</span></td><td><span class="inline-code">/api/insumos/[id]</span></td><td>Edita dados ou lança movimentação (delta)</td></tr>
+      <tr><td><span class="badge badge-red">DELETE</span></td><td><span class="inline-code">/api/insumos/[id]</span></td><td>Remove insumo</td></tr>
+      <tr><td><span class="badge badge-blue">GET</span></td><td><span class="inline-code">/api/despesas?from=&amp;to=</span></td><td>Lista despesas no período</td></tr>
+      <tr><td><span class="badge badge-green">POST</span></td><td><span class="inline-code">/api/despesas</span></td><td>Cria despesa</td></tr>
+      <tr><td><span class="badge badge-amber">PATCH</span></td><td><span class="inline-code">/api/despesas/[id]</span></td><td>Edita despesa</td></tr>
+      <tr><td><span class="badge badge-red">DELETE</span></td><td><span class="inline-code">/api/despesas/[id]</span></td><td>Remove despesa</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     8 — MODO TREINAMENTO
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-amber">🎓</div>
+    <div class="section-title-wrap">
+      <h2>8. Modo Treinamento — Implementação</h2>
+      <p>Como a simulação em memória foi construída</p>
+    </div>
+  </div>
+
+  <h3>Camadas da implementação</h3>
+  <div class="cards">
+    <div class="card amber">
+      <div class="card-title">Camada 1 — Middleware</div>
+      <p>Intercepta qualquer mutação de API (<span class="inline-code">!= GET</span>) e retorna <span class="inline-code">&#123; ok: true &#125;</span> sem tocar no banco.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Camada 2 — Estado local</div>
+      <p><span class="inline-code">simulado: Record&lt;mesaId, MesaComPedido&gt;</span> em <span class="inline-code">useState</span> no componente mesas-grid.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Camada 3 — Dados efetivos</div>
+      <p><span class="inline-code">mesaEfetiva</span> mescla estado real do servidor com o simulado do trainee.</p>
+    </div>
+    <div class="card cyan">
+      <div class="card-title">Camada 4 — UI</div>
+      <p>Cards e modal usam <span class="inline-code">display</span> e <span class="inline-code">mesaEfetiva</span> para mostrar dados corretos sem consultar o servidor.</p>
+    </div>
+  </div>
+
+  <h3>Estrutura do estado simulado</h3>
+  <div class="code-label">src/app/mesas/mesas-grid.tsx</div>
+  <div class="code-block">
+<pre><span class="cm">// Estado de simulação em memória (só existe para trainee)</span>
+<span class="kw">const</span> [simulado, setSimulado] = useState&lt;Record&lt;<span class="kw">string</span>, MesaComPedido&gt;&gt;({});
+
+<span class="cm">// Dados efetivos que o UI usa</span>
+<span class="kw">const</span> mesaEfetiva =
+  (isTrainee && mesaIdSelecionada && simulado[mesaIdSelecionada])
+    ? simulado[mesaIdSelecionada]
+    : mesaSelecionada;
+
+<span class="cm">// Exemplo: abrirMesa no modo trainee</span>
+<span class="kw">if</span> (isTrainee) {
+  atualizarSimulado(mesa.id, {
+    ...mesa,
+    status: <span class="str">"OCUPADA"</span>,
+    orders: [{
+      id: <span class="str">`treino-${Date.now()}`</span>,
+      total: <span class="num">0</span>,
+      paymentStatus: <span class="str">"PENDENTE"</span>,
+      items: [],
+    }],
+  });
+  <span class="kw">return</span>;  <span class="cm">// não chama a API</span>
+}</pre>
+  </div>
+
+  <div class="alert alert-info">
+    <div class="alert-icon">ℹ️</div>
+    <div class="alert-text">
+      <strong>Limitação por design</strong>
+      O estado simulado é volátil (in-memory). Recarregar a página zera a simulação — o que é intencional para o modo treinamento.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     9 — PAGAMENTO SPLIT
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-green">💳</div>
+    <div class="section-title-wrap">
+      <h2>9. Lógica de Pagamento Split</h2>
+      <p>Como o pagamento dividido é processado e armazenado</p>
+    </div>
+  </div>
+
+  <h3>Helper resolverPagamentos</h3>
+  <p>Presente em ambos os endpoints de fechar (<span class="inline-code">fechar/route.ts</span> e <span class="inline-code">fechar-e-liberar/route.ts</span>):</p>
+  <div class="code-block">
+<pre><span class="kw">type</span> PagamentoEntry = { forma: <span class="kw">string</span>; valor: <span class="kw">number</span> };
+
+<span class="kw">function</span> <span class="fn">resolverPagamentos</span>(pagamentos: PagamentoEntry[], totalFinal: <span class="kw">number</span>) {
+  <span class="kw">const</span> validos = pagamentos.filter(p => p.valor > <span class="num">0</span>);
+
+  <span class="cm">// Pedido gratuito (desconto 100%)</span>
+  <span class="kw">if</span> (validos.length === <span class="num">0</span>)
+    <span class="kw">return</span> { formaPagamento: pagamentos[<span class="num">0</span>]?.forma ?? <span class="str">"DINHEIRO"</span>, pagamentosSplit: <span class="kw">null</span> };
+
+  <span class="cm">// Forma primária = maior valor pago</span>
+  <span class="kw">const</span> primario = validos.reduce((a, b) => b.valor > a.valor ? b : a);
+
+  <span class="cm">// Salva split só se houver mais de uma forma</span>
+  <span class="kw">const</span> pagamentosSplit = validos.length > <span class="num">1</span> ? validos : <span class="kw">null</span>;
+
+  <span class="kw">return</span> { formaPagamento: primario.forma, pagamentosSplit };
+}</pre>
+  </div>
+
+  <h3>Leitura no Financeiro</h3>
+  <p>A página <span class="inline-code">src/app/financeiro/page.tsx</span> distribui os valores corretamente:</p>
+  <div class="code-block">
+<pre><span class="kw">type</span> PagEntry = { forma: <span class="kw">string</span>; valor: <span class="kw">number</span> };
+
+<span class="kw">const</span> todasEntradas: PagEntry[] = pedidosFechados.flatMap(p => {
+  <span class="kw">const</span> split = p.pagamentosSplit <span class="kw">as</span> PagEntry[] | <span class="kw">null</span>;
+  <span class="kw">if</span> (split && split.length > <span class="num">0</span>) <span class="kw">return</span> split;          <span class="cm">// usa split</span>
+  <span class="kw">return</span> [{ forma: p.formaPagamento ?? <span class="str">"DINHEIRO"</span>, valor: Number(p.total) }];
+});
+
+<span class="kw">const</span> porForma = {
+  DINHEIRO: somaForma(<span class="str">"DINHEIRO"</span>),
+  CREDITO:  somaForma(<span class="str">"CREDITO"</span>),
+  DEBITO:   somaForma(<span class="str">"DEBITO"</span>),
+  PIX:      somaForma(<span class="str">"PIX"</span>),
+};</pre>
+  </div>
+
+  <h3>Campo no banco de dados</h3>
+  <table>
+    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Exemplo de valor</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="inline-code">pagamentosSplit</span></td>
+        <td><span class="inline-code">JSONB</span> (nullable)</td>
+        <td><span class="inline-code">[{"forma":"DINHEIRO","valor":50},{"forma":"PIX","valor":70}]</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Quando pagamento é feito em uma única forma, a coluna fica <span class="inline-code">NULL</span> e apenas <span class="inline-code">formaPagamento</span> é preenchida.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     10 — DEPLOY E EXECUÇÃO
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-blue">🚀</div>
+    <div class="section-title-wrap">
+      <h2>10. Deploy e Execução</h2>
+      <p>Comandos para desenvolvimento, build e produção</p>
+    </div>
+  </div>
+
+  <h3>Ambiente de desenvolvimento</h3>
+  <div class="code-block">
+<pre><span class="cm"># Instalar dependências</span>
+<span class="fn">yarn</span> install
+
+<span class="cm"># Aplicar migrations e gerar client Prisma</span>
+<span class="fn">npx prisma migrate dev</span>
+<span class="fn">npx prisma db seed</span>
+
+<span class="cm"># Iniciar servidor de desenvolvimento (hot reload)</span>
+<span class="fn">yarn dev</span>
+<span class="cm"># Acesse: http://localhost:3000</span></pre>
+  </div>
+
+  <h3>Build de produção</h3>
+  <div class="code-block">
+<pre><span class="cm"># Gerar build otimizado</span>
+<span class="fn">yarn build</span>
+
+<span class="cm"># Iniciar servidor de produção</span>
+<span class="fn">yarn start</span>
+
+<span class="cm"># Aplicar migrations em produção (sem reset)</span>
+<span class="fn">npx prisma migrate deploy</span></pre>
+  </div>
+
+  <h3>Checklist de deploy em novo servidor</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Clonar repositório</strong><span>git clone do repositório + checkout da branch main</span></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Criar .env</strong><span>DATABASE_URL, AUTH_SECRET e NEXTAUTH_URL configurados</span></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>yarn install</strong><span>Instala todas as dependências do lockfile</span></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><strong>npx prisma migrate deploy</strong><span>Aplica todas as migrations no banco</span></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><strong>npx prisma db seed</strong><span>Cria os usuários padrão (admin, caixa, treinamento)</span></div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-body"><strong>yarn build && yarn start</strong><span>Build e início do servidor de produção</span></div></div>
+  </div>
+
+  <div class="alert alert-info">
+    <div class="alert-icon">💡</div>
+    <div class="alert-text">
+      <strong>PM2 recomendado para produção</strong>
+      Use <span class="inline-code">pm2 start yarn --name vilamill -- start</span> para manter o processo ativo após reinicializações do servidor.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     11 — GESTÃO DE USUÁRIOS
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-purple">👥</div>
+    <div class="section-title-wrap">
+      <h2>11. Gestão de Usuários</h2>
+      <p>Como criar, editar e remover usuários no sistema</p>
+    </div>
+  </div>
+
+  <div class="alert alert-warn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <strong>Não há tela de admin de usuários</strong>
+      O gerenciamento de usuários é feito via Prisma Studio ou scripts Node.js diretamente no banco. Qualquer alteração requer acesso ao servidor.
+    </div>
+  </div>
+
+  <h3>Criar novo usuário</h3>
+  <div class="code-block">
+<pre><span class="kw">import</span> { PrismaClient } <span class="kw">from</span> <span class="str">"@prisma/client"</span>;
+<span class="kw">import</span> bcrypt <span class="kw">from</span> <span class="str">"bcryptjs"</span>;
+
+<span class="kw">const</span> prisma = <span class="kw">new</span> PrismaClient();
+
+<span class="kw">await</span> prisma.user.create({
+  <span class="kw">data</span>: {
+    nome:      <span class="str">"Nome do Funcionário"</span>,
+    email:     <span class="str">"nome_login"</span>,          <span class="cm">// sem espaços, sem @</span>
+    senhaHash: <span class="kw">await</span> bcrypt.hash(<span class="str">"senha123"</span>, <span class="num">12</span>),
+    role:      <span class="str">"CAIXA"</span>,              <span class="cm">// ou "ADMIN"</span>
+  },
+});
+
+<span class="kw">await</span> prisma.$disconnect();</pre>
+  </div>
+
+  <h3>Listar usuários existentes</h3>
+  <div class="code-block">
+<pre><span class="cm"># Via Prisma Studio (interface visual)</span>
+<span class="fn">npx prisma studio</span>
+<span class="cm"># Abra a tabela "User" no navegador em localhost:5555</span>
+
+<span class="cm"># Via SQL direto</span>
+<span class="fn">SELECT</span> id, nome, email, role <span class="fn">FROM</span> <span class="str">"User"</span>;</pre>
+  </div>
+
+  <h3>Regras do campo email (username)</h3>
+  <ul>
+    <li>O campo <span class="inline-code">email</span> é usado como <strong>username de login</strong> (não precisa ser um e-mail real).</li>
+    <li>Deve ser único no banco.</li>
+    <li>O valor exato <span class="inline-code">"treinamento"</span> ativa automaticamente o modo treinamento via <span class="inline-code">auth.ts</span>.</li>
+    <li>Não use espaços ou caracteres especiais — afeta o matching do middleware.</li>
+  </ul>
+
+  <h3>Alterar role de um usuário</h3>
+  <div class="code-block">
+<pre><span class="kw">await</span> prisma.user.update({
+  <span class="kw">where</span>: { email: <span class="str">"nome_login"</span> },
+  <span class="kw">data</span>:  { role: <span class="str">"ADMIN"</span> },  <span class="cm">// ou "CAIXA"</span>
+});</pre>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     12 — TROUBLESHOOTING
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-red">🔧</div>
+    <div class="section-title-wrap">
+      <h2>12. Resolução de Problemas (Troubleshooting)</h2>
+      <p>Erros conhecidos, causas e soluções</p>
+    </div>
+  </div>
+
+  <h3>Erros de banco de dados</h3>
+  <table>
+    <thead><tr><th>Sintoma</th><th>Causa Provável</th><th>Solução</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Página em branco / erro 500</td>
+        <td>DATABASE_URL incorreta ou banco offline</td>
+        <td>Verificar .env e conexão com o PostgreSQL. Testar com <span class="inline-code">npx prisma db pull</span>.</td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">P2021: Table does not exist</span></td>
+        <td>Migrations não aplicadas</td>
+        <td>Rodar <span class="inline-code">npx prisma migrate deploy</span></td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">P2002: Unique constraint failed</span></td>
+        <td>Tentativa de criar item com email/número já existente</td>
+        <td>Verificar dados duplicados na tabela em questão</td>
+      </tr>
+      <tr>
+        <td>EPERM ao rodar <span class="inline-code">prisma generate</span></td>
+        <td>Processo node travou o arquivo DLL do query engine</td>
+        <td><span class="inline-code">Stop-Process -Name node -Force</span> (PowerShell), depois <span class="inline-code">prisma generate</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Erros de autenticação</h3>
+  <table>
+    <thead><tr><th>Sintoma</th><th>Causa Provável</th><th>Solução</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Login inválido para usuário correto</td>
+        <td>Senha ou email incorreto no banco</td>
+        <td>Resetar senha via script bcrypt. Verificar campo email sem espaços.</td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">isTrainee</span> sempre false</td>
+        <td>Campo email do usuário treinamento não é exatamente <span class="inline-code">"treinamento"</span></td>
+        <td>Verificar no banco: <span class="inline-code">SELECT email FROM "User" WHERE nome LIKE '%rein%'</span></td>
+      </tr>
+      <tr>
+        <td>Sessão expira muito rápido</td>
+        <td>AUTH_SECRET mudou ou expiração padrão do JWT</td>
+        <td>Verificar AUTH_SECRET estável. Ajustar <span class="inline-code">session.maxAge</span> em auth.ts se necessário.</td>
+      </tr>
+      <tr>
+        <td>Redirect loop no login</td>
+        <td>NEXTAUTH_URL diferente da URL real do sistema</td>
+        <td>Corrigir NEXTAUTH_URL no .env para URL exata de acesso.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Erros de aplicação / UI</h3>
+  <table>
+    <thead><tr><th>Sintoma</th><th>Causa Provável</th><th>Solução</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Botão "Fechar Conta" desabilitado</td>
+        <td>Saldo restante ≠ 0 (pagamentos não cobrem o total)</td>
+        <td>Verificar se a soma dos pagamentos iguala o total com desconto (tolerância ±R$0,01).</td>
+      </tr>
+      <tr>
+        <td>Mesa aparece ocupada sem pedido</td>
+        <td>Status dessincronizado (falha durante liberação)</td>
+        <td>Usar "Liberar Mesa de Emergência" na UI ou: <span class="inline-code">UPDATE "Table" SET status='LIVRE' WHERE numero=X;</span></td>
+      </tr>
+      <tr>
+        <td>Trainee: mesa não abre</td>
+        <td><span class="inline-code">isTrainee</span> não está chegando à sessão</td>
+        <td>Verificar callback JWT em auth.ts e email do usuário no banco.</td>
+      </tr>
+      <tr>
+        <td>Produtos não aparecem no modal de mesas</td>
+        <td>Nenhum produto cadastrado ou erro ao carregar</td>
+        <td>Verificar tabela Product no banco. Checar logs do servidor.</td>
+      </tr>
+      <tr>
+        <td>Financeiro com valores zerados</td>
+        <td>Nenhum pedido fechado no período selecionado</td>
+        <td>Verificar filtro de datas. Confirmar se há pedidos com paymentStatus=PAGO.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Comandos úteis de diagnóstico</h3>
+  <div class="code-block">
+<pre><span class="cm"># Ver pedidos abertos</span>
+<span class="fn">SELECT</span> o.id, t.numero, o."paymentStatus", o.total
+<span class="fn">FROM</span> <span class="str">"Order"</span> o
+<span class="fn">JOIN</span> <span class="str">"Table"</span> t <span class="fn">ON</span> t.id = o."mesaId"
+<span class="fn">WHERE</span> o."paymentStatus" = <span class="str">'PENDENTE'</span>;
+
+<span class="cm"># Verificar status de todas as mesas</span>
+<span class="fn">SELECT</span> numero, status <span class="fn">FROM</span> <span class="str">"Table"</span> <span class="fn">ORDER BY</span> numero;
+
+<span class="cm"># Forçar liberação de mesa específica (emergência)</span>
+<span class="fn">UPDATE</span> <span class="str">"Table"</span> <span class="fn">SET</span> status = <span class="str">'LIVRE'</span> <span class="fn">WHERE</span> numero = <span class="num">5</span>;
+
+<span class="cm"># Ver últimos 10 pedidos fechados</span>
+<span class="fn">SELECT</span> id, total, "formaPagamento", "closedAt"
+<span class="fn">FROM</span> <span class="str">"Order"</span>
+<span class="fn">WHERE</span> "paymentStatus" = <span class="str">'PAGO'</span>
+<span class="fn">ORDER BY</span> "closedAt" <span class="fn">DESC</span> <span class="fn">LIMIT</span> <span class="num">10</span>;
+
+<span class="cm"># Ver usuários cadastrados</span>
+<span class="fn">SELECT</span> nome, email, role <span class="fn">FROM</span> <span class="str">"User"</span>;</pre>
+  </div>
+
+  <div class="highlight">
+    <h4>Contato e repositório</h4>
+    <p>Repositório: <strong style="color:#7dd3fc">github.com/willianslegacy94-zion/vilamill-sistema</strong><br>
+    Branch principal: <strong style="color:#86efac">main</strong><br>
+    Em caso de problemas graves, verificar os logs do servidor Next.js e o Prisma Studio para inspeção direta do banco antes de qualquer alteração manual.</p>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manual do Usuário — Villa Mill Tamboré</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0f172a;
+    --blue:    #1d4ed8;
+    --blue-lt: #3b82f6;
+    --slate:   #1e293b;
+    --gray:    #64748b;
+    --light:   #f1f5f9;
+    --white:   #ffffff;
+    --green:   #16a34a;
+    --amber:   #d97706;
+    --red:     #dc2626;
+    --cyan:    #0891b2;
+  }
+
+  /* Preserve colors in PDF */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: var(--slate);
+    background: var(--white);
+  }
+
+  /* ── CAPA ─────────────────────────────────────────── */
+  .cover {
+    background-color: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    page-break-after: always;
+    break-after: page;
+  }
+  .cover-logo {
+    width: 80px; height: 80px;
+    background-color: var(--blue);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 32px;
+    font-size: 36px; color: var(--white);
+  }
+  .cover h1 {
+    font-size: 32pt;
+    font-weight: 800;
+    color: var(--white);
+    text-align: center;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .cover h2 {
+    font-size: 14pt;
+    font-weight: 400;
+    color: #94a3b8;
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .cover-badge {
+    background-color: var(--blue);
+    color: var(--white);
+    padding: 6px 20px;
+    border-radius: 99px;
+    font-size: 10pt;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .cover-meta {
+    color: #64748b;
+    font-size: 9pt;
+    text-align: center;
+    margin-top: 48px;
+  }
+  .cover-divider {
+    width: 60px; height: 3px;
+    background-color: var(--blue);
+    border-radius: 2px;
+    margin: 24px auto;
+  }
+
+  /* ── ÍNDICE ───────────────────────────────────────── */
+  .toc {
+    padding: 60px 56px;
+    page-break-after: always;
+    break-after: page;
+  }
+  .toc h2 {
+    font-size: 20pt;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .toc-subtitle {
+    color: var(--gray);
+    font-size: 10pt;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--light);
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .toc-num {
+    width: 28px; height: 28px;
+    background-color: var(--blue);
+    color: var(--white);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9pt;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-weight: 500; color: var(--slate); }
+  .toc-dots { flex: 1; border-bottom: 1px dotted #cbd5e1; height: 1px; margin: 0 8px; }
+  .toc-page { color: var(--gray); font-size: 9pt; font-weight: 500; }
+
+  /* ── SEÇÕES ───────────────────────────────────────── */
+  .section {
+    padding: 48px 56px;
+    page-break-before: always;
+    break-before: page;
+  }
+  .section:first-of-type { page-break-before: avoid; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--light);
+  }
+  .section-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .icon-blue   { background-color: #dbeafe; }
+  .icon-green  { background-color: #dcfce7; }
+  .icon-amber  { background-color: #fef3c7; }
+  .icon-red    { background-color: #fee2e2; }
+  .icon-cyan   { background-color: #cffafe; }
+  .icon-purple { background-color: #ede9fe; }
+
+  .section-title-wrap h2 {
+    font-size: 16pt;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.2;
+  }
+  .section-title-wrap p {
+    font-size: 9pt;
+    color: var(--gray);
+    margin-top: 2px;
+  }
+
+  h3 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--slate);
+    margin: 28px 0 12px;
+  }
+  h4 {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: var(--blue);
+    margin: 20px 0 8px;
+  }
+  p { margin-bottom: 10px; color: var(--slate); }
+
+  /* ── CARDS ────────────────────────────────────────── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .cards-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .card {
+    background-color: var(--light);
+    border-radius: 10px;
+    padding: 16px;
+    border-left: 4px solid var(--blue);
+  }
+  .card.green  { border-left-color: var(--green); }
+  .card.amber  { border-left-color: var(--amber); }
+  .card.red    { border-left-color: var(--red); }
+  .card.cyan   { border-left-color: var(--cyan); }
+  .card.purple { border-left-color: #7c3aed; }
+
+  .card-title {
+    font-weight: 700;
+    font-size: 10pt;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .card p { font-size: 9.5pt; margin: 0; color: var(--gray); }
+
+  /* ── STEPS ────────────────────────────────────────── */
+  .steps { margin: 16px 0; }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    background-color: var(--blue);
+    color: var(--white);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9pt;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { display: block; font-size: 10pt; color: var(--navy); margin-bottom: 2px; }
+  .step-body span { font-size: 9.5pt; color: var(--gray); }
+
+  /* ── ALERTS ───────────────────────────────────────── */
+  .alert {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .alert-info    { background-color: #dbeafe; border-left: 4px solid var(--blue-lt); }
+  .alert-warn    { background-color: #fef3c7; border-left: 4px solid var(--amber); }
+  .alert-success { background-color: #dcfce7; border-left: 4px solid var(--green); }
+  .alert-danger  { background-color: #fee2e2; border-left: 4px solid var(--red); }
+
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-text { font-size: 9.5pt; }
+  .alert-text strong { display: block; margin-bottom: 2px; font-size: 10pt; }
+
+  /* ── TABLE ────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 9.5pt;
+  }
+  th {
+    background-color: var(--navy);
+    color: var(--white);
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9pt;
+    letter-spacing: 0.3px;
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: var(--slate);
+  }
+  tr:nth-child(even) td { background-color: var(--light); }
+
+  /* ── BADGES ───────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 8.5pt;
+    font-weight: 600;
+  }
+  .badge-blue   { background-color: #dbeafe; color: #1e40af; }
+  .badge-green  { background-color: #dcfce7; color: #166534; }
+  .badge-amber  { background-color: #fef3c7; color: #92400e; }
+  .badge-red    { background-color: #fee2e2; color: #991b1b; }
+  .badge-gray   { background-color: var(--light); color: var(--gray); }
+
+  /* ── STATUS PILLS ─────────────────────────────────── */
+  .pill-row { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+  .pill {
+    padding: 5px 14px;
+    border-radius: 99px;
+    font-size: 9pt;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pill-livre    { background-color: #dcfce7; color: #166534; }
+  .pill-ocupada  { background-color: #fee2e2; color: #991b1b; }
+  .pill-conta    { background-color: #fef3c7; color: #92400e; }
+
+  /* ── ROLE TABLE ───────────────────────────────────── */
+  .role-row td:first-child { font-weight: 600; }
+  .check   { color: var(--green); font-weight: 700; }
+  .cross   { color: var(--red);   font-weight: 700; }
+  .partial { color: var(--amber); font-weight: 700; }
+
+  /* ── HIGHLIGHT BOX ────────────────────────────────── */
+  .highlight {
+    background-color: var(--navy);
+    color: var(--white);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+  .highlight h4 { color: #7dd3fc; margin-top: 0; }
+  .highlight p  { color: #cbd5e1; font-size: 9.5pt; margin: 0; }
+
+  /* ── FOOTER ───────────────────────────────────────── */
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
+  .page-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 36px;
+    background-color: var(--navy);
+    color: #64748b;
+    font-size: 8pt;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 56px;
+  }
+  .page-footer span { color: #94a3b8; }
+
+  /* ── PRINT ────────────────────────────────────────── */
+  @media print {
+    body { font-size: 10pt; }
+    .section { padding: 36px 48px 48px; }
+    .cover { min-height: 100vh; }
+  }
+
+  ul, ol { padding-left: 20px; margin: 10px 0; }
+  li { margin-bottom: 5px; font-size: 9.5pt; color: var(--slate); }
+  li strong { color: var(--navy); }
+
+  .inline-code {
+    background-color: var(--light);
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 9pt;
+    color: var(--blue);
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     CAPA
+═══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">🍽</div>
+  <h1>Villa Mill Tamboré</h1>
+  <h2>Sistema de Gestão — PDV</h2>
+  <div class="cover-divider"></div>
+  <div class="cover-badge">MANUAL DO USUÁRIO</div>
+  <p style="color:#94a3b8;font-size:10pt;margin-top:12px;">Guia completo de operação do sistema</p>
+  <div style="margin-top:64px;display:flex;gap:32px;">
+    <div style="text-align:center;">
+      <div style="color:#7dd3fc;font-size:20pt;font-weight:800;">3</div>
+      <div style="color:#64748b;font-size:8pt;">Perfis de acesso</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="color:#7dd3fc;font-size:20pt;font-weight:800;">6</div>
+      <div style="color:#64748b;font-size:8pt;">Módulos</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="color:#7dd3fc;font-size:20pt;font-weight:800;">24/7</div>
+      <div style="color:#64748b;font-size:8pt;">Operação</div>
+    </div>
+  </div>
+  <div class="cover-meta">
+    Versão 1.3 &nbsp;·&nbsp; Maio 2026 &nbsp;·&nbsp; Uso interno — Não distribuir
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ÍNDICE
+═══════════════════════════════════════════════════════════ -->
+<div class="toc">
+  <h2>Sumário</h2>
+  <p class="toc-subtitle">Navegue pelos capítulos deste manual</p>
+
+  <div class="toc-item">
+    <div class="toc-num">1</div>
+    <div class="toc-text">Visão Geral do Sistema</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">3</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">2</div>
+    <div class="toc-text">Perfis de Acesso e Login</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">4</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">3</div>
+    <div class="toc-text">Painel Inicial (Dashboard)</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">5</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">4</div>
+    <div class="toc-text">Módulo Mesas — Gerenciamento de Pedidos</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">6</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">5</div>
+    <div class="toc-text">Módulo Produtos</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">8</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">6</div>
+    <div class="toc-text">Módulo Estoque (Insumos)</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">9</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">7</div>
+    <div class="toc-text">Módulo Despesas</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">10</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">8</div>
+    <div class="toc-text">Módulo Financeiro</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">11</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">9</div>
+    <div class="toc-text">Modo Treinamento</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">12</div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">10</div>
+    <div class="toc-text">Dúvidas Frequentes</div>
+    <div class="toc-dots"></div>
+    <div class="toc-page">13</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     1 — VISÃO GERAL
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-blue">🏠</div>
+    <div class="section-title-wrap">
+      <h2>1. Visão Geral do Sistema</h2>
+      <p>O que é e o que faz o sistema Villa Mill Tamboré</p>
+    </div>
+  </div>
+
+  <p>O <strong>Villa Mill Tamboré PDV</strong> é o sistema central de gestão do restaurante. Ele integra, em uma única tela acessada pelo navegador, todos os processos operacionais do dia a dia: abertura e fechamento de mesas, lançamento de pedidos, controle de estoque, registro de despesas e relatórios financeiros.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">🍽 Gestão de Mesas</div>
+      <p>Abre mesas, registra pedidos, aplica descontos e fecha a conta com múltiplas formas de pagamento.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">📦 Controle de Estoque</div>
+      <p>Monitora insumos, alerta quando estão abaixo do mínimo e registra entradas e saídas.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">💰 Relatório Financeiro</div>
+      <p>Mostra receita, CMV, despesas e resultado líquido por período.</p>
+    </div>
+    <div class="card cyan">
+      <div class="card-title">🎓 Modo Treinamento</div>
+      <p>Permite treinar toda a operação sem salvar nada no banco de dados.</p>
+    </div>
+  </div>
+
+  <h3>Como acessar</h3>
+  <p>O sistema é acessado pelo navegador (Google Chrome recomendado). Digite o endereço fornecido pelo responsável de TI na barra de endereços. Não é necessário instalar nenhum aplicativo.</p>
+
+  <div class="alert alert-info">
+    <div class="alert-icon">💡</div>
+    <div class="alert-text">
+      <strong>Dica</strong>
+      Para facilitar o acesso diário, adicione o endereço do sistema aos favoritos do navegador ou à tela inicial do tablet/celular.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     2 — PERFIS DE ACESSO
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-purple">👤</div>
+    <div class="section-title-wrap">
+      <h2>2. Perfis de Acesso e Login</h2>
+      <p>Usuários, senhas e o que cada perfil pode fazer</p>
+    </div>
+  </div>
+
+  <h3>Como fazer login</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Abra o sistema no navegador</strong>
+        <span>Digite o endereço do sistema e aguarde a tela de login aparecer.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Digite o usuário</strong>
+        <span>Use <span class="inline-code">admin</span>, <span class="inline-code">caixa</span> ou <span class="inline-code">treinamento</span> conforme seu perfil.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Digite a senha e clique em Entrar</strong>
+        <span>Solicite a senha ao responsável. Ela é criptografada e não aparece em tela.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Tabela de permissões por perfil</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Módulo / Ação</th>
+        <th>Admin</th>
+        <th>Caixa</th>
+        <th>Treinamento</th>
+      </tr>
+    </thead>
+    <tbody class="role-row">
+      <tr>
+        <td>Dashboard (tela inicial)</td>
+        <td class="check">✔ Completo</td>
+        <td class="partial">◑ Parcial</td>
+        <td class="check">✔ Completo</td>
+      </tr>
+      <tr>
+        <td>Mesas — abrir / fechar pedidos</td>
+        <td class="check">✔</td>
+        <td class="check">✔</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+      <tr>
+        <td>Produtos — visualizar</td>
+        <td class="check">✔</td>
+        <td class="check">✔</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+      <tr>
+        <td>Produtos — criar / editar / excluir</td>
+        <td class="check">✔</td>
+        <td class="cross">✗</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+      <tr>
+        <td>Estoque — visualizar</td>
+        <td class="check">✔</td>
+        <td class="check">✔</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+      <tr>
+        <td>Estoque — lançar entrada/saída</td>
+        <td class="check">✔</td>
+        <td class="check">✔</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+      <tr>
+        <td>Despesas — visualizar e lançar</td>
+        <td class="check">✔</td>
+        <td class="cross">✗</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+      <tr>
+        <td>Financeiro — relatórios</td>
+        <td class="check">✔</td>
+        <td class="cross">✗</td>
+        <td class="check">✔ (simulado)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-warn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <strong>Perfil Treinamento</strong>
+      No modo treinamento, <strong>nenhuma ação é salva</strong> no banco de dados. Você pode explorar todas as funcionalidades sem risco de alterar dados reais.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     3 — DASHBOARD
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-cyan">📊</div>
+    <div class="section-title-wrap">
+      <h2>3. Painel Inicial (Dashboard)</h2>
+      <p>A tela principal do sistema após o login</p>
+    </div>
+  </div>
+
+  <p>Ao fazer login, você é direcionado ao <strong>Painel Inicial</strong>. Ele exibe um resumo em tempo real da operação e acesso rápido a todos os módulos.</p>
+
+  <h3>Cards de informação (visível para Admin e Treinamento)</h3>
+  <div class="cards cards-3">
+    <div class="card green">
+      <div class="card-title">🪑 Mesas Abertas</div>
+      <p>Quantas mesas estão com pedidos ativos no momento.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">💵 Faturamento Hoje</div>
+      <p>Total em reais de pedidos fechados no dia atual.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">🧾 Pedidos Fechados</div>
+      <p>Número de pedidos encerrados no dia.</p>
+    </div>
+  </div>
+
+  <h3>Alertas de Estoque Crítico</h3>
+  <p>Caso algum insumo esteja com quantidade abaixo do nível mínimo de alerta, um aviso vermelho aparece no painel, listando os itens que precisam de reposição.</p>
+
+  <div class="alert alert-danger">
+    <div class="alert-icon">🔴</div>
+    <div class="alert-text">
+      <strong>Quando esse alerta aparecer</strong>
+      Comunique imediatamente o responsável pelo estoque para realizar a reposição. Ignorar o alerta pode interromper o preparo dos pratos.
+    </div>
+  </div>
+
+  <h3>Módulos disponíveis</h3>
+  <p>Abaixo dos cards, ficam os atalhos para cada módulo do sistema. Clique no módulo desejado para acessá-lo. Módulos sem permissão para o seu perfil não aparecem.</p>
+
+  <h3>Navegação</h3>
+  <ul>
+    <li><strong>Desktop:</strong> barra superior fixa com links para todos os módulos.</li>
+    <li><strong>Celular / Tablet:</strong> barra inferior com ícones de navegação.</li>
+    <li><strong>Logout:</strong> clique no ícone de usuário no canto superior direito.</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     4 — MESAS
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-red">🪑</div>
+    <div class="section-title-wrap">
+      <h2>4. Módulo Mesas</h2>
+      <p>Abertura de mesa, pedidos, pagamento e fechamento de conta</p>
+    </div>
+  </div>
+
+  <h3>Status das mesas</h3>
+  <div class="pill-row">
+    <div class="pill pill-livre">● LIVRE</div>
+    <div class="pill pill-ocupada">● OCUPADA</div>
+    <div class="pill pill-conta">● CONTA</div>
+  </div>
+  <table>
+    <thead><tr><th>Status</th><th>Significado</th><th>Cor no sistema</th></tr></thead>
+    <tbody>
+      <tr><td><strong>LIVRE</strong></td><td>Mesa disponível, sem pedido ativo</td><td>Verde</td></tr>
+      <tr><td><strong>OCUPADA</strong></td><td>Mesa com pedido em andamento</td><td>Vermelho</td></tr>
+      <tr><td><strong>CONTA</strong></td><td>Pedido encerrado, aguardando pagamento</td><td>Amarelo</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Abrindo uma mesa</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Clique na mesa desejada (status LIVRE)</strong>
+        <span>O painel lateral da mesa se abrirá.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Clique em "Abrir Mesa"</strong>
+        <span>Um pedido é criado e a mesa muda para OCUPADA.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Adicione itens ao pedido</strong>
+        <span>Use as abas de categoria ou a busca para encontrar o produto. Clique no item para adicionar.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Adicionando e removendo itens</h3>
+  <ul>
+    <li>Clique na <strong>aba de categoria</strong> (ex.: Pratos do Dia) para filtrar os produtos.</li>
+    <li>Use a <strong>barra de busca</strong> para encontrar um produto pelo nome.</li>
+    <li>Clique no produto para adicioná-lo. Se já estiver no pedido, a quantidade é incrementada.</li>
+    <li>Para remover, clique no ícone de <strong>lixeira</strong> ao lado do item na lista do pedido.</li>
+  </ul>
+
+  <h3>Fechando a conta — Passo a passo completo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Clique em "Fechar Conta" ou "Fechar e Liberar"</strong>
+        <span>"Fechar Conta" mantém a mesa ocupada; "Fechar e Liberar" já a deixa livre.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Aplique desconto (opcional)</strong>
+        <span>Digite o valor do desconto em reais. O total é atualizado automaticamente.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Informe a(s) forma(s) de pagamento</strong>
+        <span>Selecione Dinheiro, Crédito, Débito ou Pix e informe o valor pago em cada forma.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Verifique o saldo restante</strong>
+        <span>O sistema calcula automaticamente quanto ainda falta. O botão só fica ativo quando o total está quitado.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Confirme o fechamento</strong>
+        <span>Clique no botão de confirmação. A conta é registrada e o pagamento salvo.</span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Pagamento Dividido (Split)</h4>
+  <p>Quando o cliente pagar com mais de uma forma, preencha o valor de cada método separadamente. O sistema soma automaticamente e mostra o restante:</p>
+  <div class="highlight">
+    <h4>Exemplo</h4>
+    <p>Total da conta: <strong style="color:#7dd3fc">R$ 120,00</strong><br>
+    Cliente paga R$ 50,00 em Dinheiro e R$ 70,00 em Pix.<br>
+    Restante exibido: <strong style="color:#86efac">R$ 0,00 ✔</strong> — botão de fechar habilitado.</p>
+  </div>
+
+  <h3>Cancelar pedido</h3>
+  <p>Para cancelar um pedido (sem cobrar o cliente), clique em <strong>"Cancelar Pedido"</strong> e informe o motivo. O cancelamento é registrado no relatório financeiro para auditoria.</p>
+
+  <h3>Liberar mesa de emergência</h3>
+  <p>Disponível para situações em que a mesa precisa ser liberada sem fechar o pedido normalmente. Use com cuidado — o pedido não é registrado como pago.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     5 — PRODUTOS
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-green">🛒</div>
+    <div class="section-title-wrap">
+      <h2>5. Módulo Produtos</h2>
+      <p>Cadastro e edição do cardápio e fichas técnicas</p>
+    </div>
+  </div>
+
+  <div class="alert alert-warn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <strong>Acesso restrito</strong>
+      Somente o perfil <strong>Admin</strong> pode criar, editar e excluir produtos. O Caixa visualiza os produtos mas não os modifica.
+    </div>
+  </div>
+
+  <h3>Cadastrando um novo produto</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Clique em "Novo Produto"</strong>
+        <span>O formulário de cadastro aparece na lateral.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Preencha nome, categoria e preço de venda</strong>
+        <span>Selecione uma categoria existente ou crie uma nova digitando no campo.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Informe o preço de custo (opcional)</strong>
+        <span>Usado para calcular o CMV no relatório financeiro.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Salve o produto</strong>
+        <span>O item já fica disponível para seleção nas mesas.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Ficha Técnica (Receita)</h3>
+  <p>A ficha técnica vincula ingredientes do estoque a um produto. Com isso, ao fechar um pedido, o sistema sabe quais ingredientes foram consumidos.</p>
+  <ul>
+    <li>Abra o produto e clique em <strong>"Ficha Técnica"</strong>.</li>
+    <li>Selecione o insumo e informe a quantidade por porção.</li>
+    <li>Adicione quantos ingredientes precisar.</li>
+  </ul>
+
+  <h3>Categorias disponíveis</h3>
+  <div class="cards cards-3">
+    <div class="card"><p>Pratos do Dia</p></div>
+    <div class="card"><p>Todos os Dias</p></div>
+    <div class="card"><p>Acompanhamentos</p></div>
+    <div class="card"><p>Lanches Tradicionais</p></div>
+    <div class="card"><p>Lanches na Baguete</p></div>
+    <div class="card"><p>Lanches Artesanais</p></div>
+    <div class="card"><p>Porções</p></div>
+    <div class="card"><p>Sucos</p></div>
+    <div class="card"><p>Refrigerantes</p></div>
+    <div class="card"><p>Cervejas</p></div>
+    <div class="card"><p>Sobremesas</p></div>
+    <div class="card amber"><p>+ Nova categoria...</p></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     6 — ESTOQUE
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-amber">📦</div>
+    <div class="section-title-wrap">
+      <h2>6. Módulo Estoque (Insumos)</h2>
+      <p>Controle de entrada, saída e alertas de reposição</p>
+    </div>
+  </div>
+
+  <p>O módulo de estoque permite monitorar todos os insumos do restaurante: matérias-primas, bebidas, embalagens e qualquer outro material controlado.</p>
+
+  <h3>Registrando uma entrada de estoque</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Localize o insumo na lista</strong>
+        <span>Use a busca ou role a lista para encontrar o item.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Clique em "Entrada"</strong>
+        <span>Informe a quantidade recebida. O estoque é acrescido automaticamente.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Registrando uma saída de estoque</h3>
+  <p>Clique em <strong>"Saída"</strong> ao lado do insumo, informe a quantidade retirada (desperdício, uso, etc.). O estoque é decrementado.</p>
+
+  <h3>Novo insumo</h3>
+  <p>Clique em <strong>"Novo Insumo"</strong> e preencha:</p>
+  <ul>
+    <li><strong>Nome</strong> do insumo</li>
+    <li><strong>Unidade:</strong> KG (quilo), UN (unidade) ou L (litro)</li>
+    <li><strong>Nível mínimo de alerta</strong> — quando o estoque cair abaixo desse valor, um alerta aparece no painel</li>
+  </ul>
+
+  <div class="alert alert-danger">
+    <div class="alert-icon">🔴</div>
+    <div class="alert-text">
+      <strong>Alertas em vermelho</strong>
+      Insumos destacados em vermelho estão com quantidade abaixo do mínimo configurado. Providencie a reposição imediatamente.
+    </div>
+  </div>
+
+  <h3>Unidades de medida</h3>
+  <table>
+    <thead><tr><th>Sigla</th><th>Unidade</th><th>Exemplos de uso</th></tr></thead>
+    <tbody>
+      <tr><td><strong>KG</strong></td><td>Quilograma</td><td>Carnes, legumes, farinha</td></tr>
+      <tr><td><strong>UN</strong></td><td>Unidade</td><td>Garrafas, ovos, embalagens</td></tr>
+      <tr><td><strong>L</strong></td><td>Litro</td><td>Óleos, sucos, bebidas a granel</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     7 — DESPESAS
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-red">💸</div>
+    <div class="section-title-wrap">
+      <h2>7. Módulo Despesas</h2>
+      <p>Registro de gastos operacionais do restaurante</p>
+    </div>
+  </div>
+
+  <div class="alert alert-warn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <strong>Acesso restrito</strong>
+      Disponível apenas para o perfil <strong>Admin</strong> (e Treinamento em modo simulado).
+    </div>
+  </div>
+
+  <p>Use este módulo para registrar qualquer gasto operacional que afete o resultado financeiro do período: contas de luz, gás, manutenção, serviços terceirizados, compras de insumos pagos à vista, etc.</p>
+
+  <h3>Lançando uma despesa</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Clique em "Nova Despesa"</strong>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Preencha os campos</strong>
+        <span>Descrição, categoria, valor (R$) e data da despesa.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Salve</strong>
+        <span>A despesa aparece na lista e é incluída no cálculo do Financeiro.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Como as despesas afetam o financeiro</h3>
+  <p>Todo valor lançado aqui é deduzido da receita bruta no módulo Financeiro, gerando o <strong>Resultado Líquido</strong> do período:</p>
+  <div class="highlight">
+    <h4>Fórmula do Resultado</h4>
+    <p><strong style="color:#7dd3fc">Resultado = Receita Bruta − CMV − Despesas</strong><br><br>
+    Portanto, despesas mal lançadas (duplicadas ou com valor errado) distorcem o resultado financeiro. Sempre confira antes de salvar.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     8 — FINANCEIRO
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-green">📈</div>
+    <div class="section-title-wrap">
+      <h2>8. Módulo Financeiro</h2>
+      <p>Relatórios de receita, custos, despesas e resultado</p>
+    </div>
+  </div>
+
+  <div class="alert alert-warn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <strong>Acesso restrito</strong>
+      Disponível apenas para o perfil <strong>Admin</strong>.
+    </div>
+  </div>
+
+  <h3>Métricas exibidas</h3>
+  <div class="cards">
+    <div class="card green">
+      <div class="card-title">💵 Receita Bruta</div>
+      <p>Total arrecadado com pedidos fechados no período selecionado.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title">🧾 CMV</div>
+      <p>Custo das mercadorias vendidas (custo unitário × quantidade de cada item vendido).</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">💸 Despesas</div>
+      <p>Soma de todas as despesas lançadas no período.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Resultado</div>
+      <p>Receita Bruta − CMV − Despesas. Exibe a margem percentual.</p>
+    </div>
+    <div class="card cyan">
+      <div class="card-title">🎫 Ticket Médio</div>
+      <p>Receita dividida pelo número de pedidos fechados.</p>
+    </div>
+    <div class="card purple">
+      <div class="card-title">🪑 Mesas Abertas</div>
+      <p>Quantidade de mesas com pedidos ativos no momento.</p>
+    </div>
+  </div>
+
+  <h3>Filtro de período</h3>
+  <p>Por padrão, o relatório exibe o <strong>mês corrente</strong> (do dia 1 até hoje). Você pode alterar o período usando os campos de data "De" e "Até" no topo da página.</p>
+
+  <h3>Breakdowns por forma de pagamento</h3>
+  <p>O sistema exibe o total recebido separado por: Dinheiro, Crédito, Débito e Pix. Pedidos com pagamento dividido (split) têm cada valor alocado na forma correta.</p>
+
+  <h3>Relatórios detalhados</h3>
+  <table>
+    <thead><tr><th>Aba / Tabela</th><th>O que mostra</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Transações</strong></td><td>Todos os pedidos fechados com mesa, horário, forma de pagamento, CMV e total.</td></tr>
+      <tr><td><strong>Mesas Abertas</strong></td><td>Pedidos em andamento com itens e subtotais parciais.</td></tr>
+      <tr><td><strong>Despesas</strong></td><td>Listagem de todas as despesas lançadas no período.</td></tr>
+      <tr><td><strong>Cancelamentos</strong></td><td>Pedidos cancelados com motivo, responsável e horário.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     9 — MODO TREINAMENTO
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-amber">🎓</div>
+    <div class="section-title-wrap">
+      <h2>9. Modo Treinamento</h2>
+      <p>Treine a operação sem risco de alterar dados reais</p>
+    </div>
+  </div>
+
+  <div class="alert alert-success">
+    <div class="alert-icon">✅</div>
+    <div class="alert-text">
+      <strong>100% seguro para treinar</strong>
+      No modo treinamento, o sistema simula todas as operações em memória. Nenhum pedido, pagamento ou alteração é salvo no banco de dados.
+    </div>
+  </div>
+
+  <h3>Como identificar o modo treinamento</h3>
+  <p>Uma <strong>faixa amarela</strong> aparece no topo de todas as telas com a mensagem:</p>
+  <div style="background-color:#fef3c7;border:2px solid #d97706;border-radius:8px;padding:12px 16px;text-align:center;font-weight:700;color:#92400e;margin:16px 0;">
+    🎓 MODO TREINAMENTO — Nenhuma ação é salva no banco de dados
+  </div>
+
+  <h3>O que funciona no modo treinamento</h3>
+  <ul>
+    <li>Abrir e fechar mesas (simulado na memória da sessão)</li>
+    <li>Adicionar e remover itens do pedido</li>
+    <li>Aplicar descontos e simular pagamentos divididos</li>
+    <li>Navegar em todos os módulos (Estoque, Despesas, Financeiro)</li>
+    <li>Cadastrar produtos, lançar despesas, registrar movimentos de estoque</li>
+  </ul>
+
+  <h3>Limitações do modo treinamento</h3>
+  <ul>
+    <li>Ao <strong>atualizar a página</strong>, todas as mesas abertas no treinamento voltam ao estado real do banco.</li>
+    <li>O faturamento exibido no Financeiro é o real — não inclui as vendas simuladas.</li>
+    <li>Produtos/insumos criados no treinamento não aparecem no dia seguinte.</li>
+  </ul>
+
+  <h3>Como fazer login no modo treinamento</h3>
+  <p>Use o usuário <span class="inline-code">treinamento</span> e a senha fornecida pelo administrador. Assim que entrar, a faixa amarela confirma que você está em modo seguro.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     10 — DÚVIDAS FREQUENTES
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon icon-blue">❓</div>
+    <div class="section-title-wrap">
+      <h2>10. Dúvidas Frequentes</h2>
+      <p>Problemas comuns e suas soluções</p>
+    </div>
+  </div>
+
+  <h4>O botão "Fechar Conta" está desabilitado, o que fazer?</h4>
+  <p>Verifique se o total pago nas formas de pagamento é igual ao valor da conta (com desconto). O botão só é habilitado quando o saldo restante é R$ 0,00. Se ainda assim não funcionar, recarregue a página.</p>
+
+  <h4>A mesa aparece como ocupada mas não tem pedidos, o que fazer?</h4>
+  <p>Use a opção <strong>"Liberar Mesa de Emergência"</strong> no painel da mesa. Isso força o status para LIVRE sem registrar pagamento.</p>
+
+  <h4>Adicionei um item errado ao pedido, como remover?</h4>
+  <p>Clique no ícone de <strong>lixeira</strong> ao lado do item na lista do pedido. Se o pedido já foi fechado, não é possível remover itens retroativamente.</p>
+
+  <h4>O sistema ficou lento ou não carregou, o que fazer?</h4>
+  <ul>
+    <li>Recarregue a página (F5 ou puxe para baixo no celular).</li>
+    <li>Verifique a conexão com a internet.</li>
+    <li>Se o problema persistir, entre em contato com o suporte técnico.</li>
+  </ul>
+
+  <h4>Esqueci a senha, o que fazer?</h4>
+  <p>Solicite a redefinição de senha ao administrador do sistema ou ao suporte técnico. As senhas são armazenadas de forma criptografada — ninguém consegue visualizá-las, apenas redefiní-las.</p>
+
+  <h4>Como imprimir a comanda de um pedido?</h4>
+  <p>No painel da mesa com pedido ativo, clique no ícone de impressão/comanda. A comanda abre em uma nova aba no formato otimizado para impressora térmica.</p>
+
+  <h4>Os dados do Financeiro estão errados, o que pode ser?</h4>
+  <ul>
+    <li>Verifique se o filtro de período está correto (De / Até).</li>
+    <li>Confira se há despesas duplicadas lançadas.</li>
+    <li>Certifique-se de que os preços de custo dos produtos estão cadastrados.</li>
+  </ul>
+
+  <div class="highlight">
+    <h4>Contato de Suporte Técnico</h4>
+    <p>Em caso de problemas que não consiga resolver com este manual, entre em contato com o responsável técnico do sistema. Tenha em mãos: descrição do problema, horário em que ocorreu e qual usuário estava logado.</p>
+  </div>
+</div>
+
+</body>
+</html>
