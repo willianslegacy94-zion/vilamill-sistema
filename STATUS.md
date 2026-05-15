@@ -1,92 +1,111 @@
 # Villa Mill Tamboré — Status do Projeto
 
-**Última atualização:** 2026-05-01
+**Última atualização:** 2026-05-14
 
 ---
 
-## ✅ Funcionalidades Implementadas
+## Funcionalidades Implementadas
 
-### Etapa 1 — PDV / Mapa de Mesas
+### Módulo: Mesas (PDV / Salão)
 - Visualização das mesas com status: **Livre** (verde), **Ocupada** (vermelho), **Conta** (vermelho escuro)
-- Abertura e fechamento de pedidos com forma de pagamento (Dinheiro, Cartão, Pix)
-- Adição e remoção de itens em tempo real
-- Baixa automática de estoque ao fechar conta (via Ficha Técnica)
+- Abertura de mesa e criação de pedido
+- Adição e remoção de itens em tempo real com busca e filtro por categoria
+- **Pagamento simples** (Dinheiro, Crédito, Débito, Pix)
+- **Pagamento dividido (split)** — múltiplas formas de pagamento em um mesmo fechamento
+- Campo de desconto (R$) com total atualizado em tempo real
+- Fechamento de conta com baixa automática de estoque (via Ficha Técnica)
+- **Cancelamento de pedido** com motivo obrigatório e log no banco
+- **Modo Treinamento** — simula abertura, itens e fechamento sem persistir no banco
+- Liberação de emergência de mesa travada
+- **SWR polling em tempo real** — atualização automática a cada 3 segundos sem flicker
 
-### Etapa 1 — Estoque e Ficha Técnica
-- CRUD completo de insumos (ingredientes)
-- Registro de entradas e saídas de estoque
-- Alertas visuais de estoque mínimo na tela de Estoque
-- **Alerta de Estoque Crítico** no Dashboard (cards vermelhos com ícone de aviso)
+### Módulo: Estoque
+- CRUD completo de insumos (nome, unidade, quantidade, nível mínimo)
+- Entradas e saídas manuais de estoque
+- Alerta visual de estoque mínimo na tela de Estoque
+- Alerta de Estoque Crítico no Dashboard (cards vermelhos)
 - Ficha Técnica por produto — vinculação de ingredientes com quantidade
 
-### Etapa 1 — Cardápio (Produtos)
-- CRUD de produtos com nome, preço e categoria
+### Módulo: Cardápio (Produtos)
+- CRUD de produtos com nome, preço de venda, preço de custo e categoria
 - Gestão da ficha técnica por produto
+- Controle de rastreamento de estoque por produto (`track_inventory`)
 
-### Etapa 1 — Financeiro
+### Módulo: Financeiro
 - Relatório diário de vendas com filtro de data
-- Faturamento por forma de pagamento (Dinheiro, Cartão, Pix)
+- Faturamento por forma de pagamento (Dinheiro, Crédito, Débito, Pix)
 - Ticket médio e total de pedidos fechados
-- Listagem de mesas abertas com total parcial
+- Registro e listagem de despesas do dia
+- Seção "Cancelamentos do dia" com motivo e responsável
+- **SWR polling em tempo real** — atualização a cada 3 segundos
 
-### Etapa 2 — Autenticação e Controle de Acesso
+### Autenticação e Controle de Acesso
 - Login com email e senha (NextAuth v5)
-- Três usuários cadastrados:
-
-| Nome    | Email                    | Senha       | Acesso                   |
-|---------|--------------------------|-------------|--------------------------|
-| Admin   | admin@villamill.com      | admin123    | Tudo                     |
-| Emilly  | emilly@villamill.com     | emilly123   | Mesas + Cardápio         |
-| Melissa | melissa@villamill.com    | melissa123  | Mesas + Cardápio         |
-
-- Navbar dinâmica: links filtrados por role (ADMIN / CAIXA)
-- Dashboard: cards de Estoque e Financeiro ocultos para CAIXA
 - Middleware protege todas as rotas — redireciona para `/login` sem sessão
+- Navbar dinâmica filtrada por role
 
-### Etapa 2 — Descontos e Log de Cancelamentos
-- Campo de desconto (R$) no fechamento de conta com total atualizado em tempo real
-- Modal de cancelamento com campo de motivo (opcional)
-- Log de cancelamentos registrado no banco (mesa, motivo, quem cancelou, horário)
-- Seção "Cancelamentos do dia" no Financeiro
+**Usuários cadastrados:**
 
-### Etapa 3 — Impressão de Pedidos (Cozinha/Bar)
-- Botão **"Enviar para Cozinha"** no modal da mesa (aparece quando há itens)
-- Página `/comanda/[id]` otimizada para impressora térmica 80mm
-- Auto-impressão ao abrir a aba (`?print=true`)
-- Botão "Imprimir" para reimpressão manual
-- Sem dependências externas — usa impressão nativa do browser
+| Nome    | Email                 | Senha      | Role  | Acesso                          |
+|---------|-----------------------|------------|-------|---------------------------------|
+| Admin   | admin@villamill.com   | admin123   | ADMIN | Tudo                            |
+| Emilly  | emilly@villamill.com  | emilly123  | CAIXA | Mesas + Cardápio                |
+| Melissa | melissa@villamill.com | melissa123 | CAIXA | Mesas + Cardápio                |
+
+> Usuários com flag `isTrainee` acessam o **Modo Treinamento** — operações simuladas sem gravação no banco.
+
+### Deploy e Infraestrutura
+- **Hostinger VPS** com Docker Compose
+- PostgreSQL 16 em container Docker
+- Build multi-stage (deps → builder → runner) com imagem Alpine enxuta
+- Migrations versionadas com `prisma migrate deploy` no container
 
 ---
 
-## 🔲 Pendente
+## Pendente / Próximos Passos
 
-### Etapa 4 — Deploy na Vercel
-- Configurar variáveis de ambiente na Vercel
-- Deploy da aplicação com banco Neon (já configurado)
-- Acesso remoto via internet
+- Impressão de comanda para cozinha/bar (`/comanda/[id]` — página térmica 80mm)
+- Relatório mensal e exportação de dados
+- Controle de usuários pelo painel Admin (criar/desativar)
+- Backup automatizado do banco
 
 ---
 
 ## Stack Técnica
 
 | Item | Tecnologia |
-|------|-----------|
+|------|------------|
 | Framework | Next.js 15 (App Router) |
 | Linguagem | TypeScript 5 |
-| Banco de dados | PostgreSQL — Neon (sa-east-1) |
-| ORM | Prisma 6.8.2 |
+| Banco de dados | PostgreSQL 16 (Docker) |
+| ORM | Prisma 6.4.1 |
 | Autenticação | NextAuth v5 (Auth.js) |
+| Polling em tempo real | SWR 2.4.1 |
 | Estilo | Tailwind CSS 4 |
-| Ícones | Lucide React |
-| Deploy (pendente) | Vercel + Neon |
+| Ícones | Lucide React 1.14.0 |
+| Deploy | Hostinger VPS + Docker Compose |
 
 ---
 
-## Variáveis de Ambiente (.env)
+## Variáveis de Ambiente
 
+```env
+DATABASE_URL=        # URL de conexão PostgreSQL
+AUTH_SECRET=         # Segredo NextAuth
+NEXTAUTH_URL=        # URL da aplicação
 ```
-DATABASE_URL=       # Neon pooler URL
-DIRECT_URL=         # Neon direct URL (para migrations)
-AUTH_SECRET=        # Segredo NextAuth
-NEXTAUTH_URL=       # URL da aplicação
-```
+
+---
+
+## Migrations Aplicadas
+
+| Migration | Descrição |
+|-----------|-----------|
+| `20260429231207_init` | Schema inicial (Table, Product, Order, OrderItem) |
+| `20260429234601_add_order_timestamps` | createdAt / closedAt em Order |
+| `20260430002057_add_payment_method` | formaPagamento em Order |
+| `20260511000000_add_cost_inventory_fields` | costPrice, track_inventory, custoUnit |
+| `20260511000001_add_auth_cancel_discount` | User, CancelamentoLog, desconto em Order |
+| `20260511000002_add_credito_debito_pagamento` | Enum CREDITO e DEBITO em FormaPagamento |
+| `20260512000000_add_despesa` | Model Despesa |
+| `20260514000000_add_pagamentos_split` | pagamentosSplit JSONB em Order |
