@@ -15,15 +15,16 @@ model Table {
 }
 
 model Product {
-  id              String       @id @default(cuid())
+  id              String               @id @default(cuid())
   nome            String
-  preco           Decimal      @db.Decimal(10, 2)
-  costPrice       Decimal      @db.Decimal(10, 2) @default(0)
+  preco           Decimal              @db.Decimal(10, 2)
+  costPrice       Decimal              @db.Decimal(10, 2) @default(0)
   categoria       String
-  track_inventory Boolean      @default(false)
-  estoque         Decimal      @db.Decimal(10, 3) @default(0)
+  track_inventory Boolean              @default(false)
+  estoque         Decimal              @db.Decimal(10, 3) @default(0)
   orderItems      OrderItem[]
   recipeItems     RecipeItem[]
+  consumosFuncionario ConsumoFuncionario[]
 }
 
 model Ingredient {
@@ -128,4 +129,49 @@ enum IngredientUnit {
   KG
   UN
   L
+}
+
+enum TipoCreditoFuncionario {
+  INDIVIDUAL
+  COLETIVO
+}
+
+model FuncionarioExterno {
+  id        String               @id @default(cuid())
+  nome      String
+  empresa   String
+  ativo     Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  creditos  CreditoFuncionario[]
+  consumos  ConsumoFuncionario[]
+}
+
+model CreditoFuncionario {
+  id            String                  @id @default(cuid())
+  funcionarioId String?
+  funcionario   FuncionarioExterno?     @relation(fields: [funcionarioId], references: [id])
+  empresa       String?
+  valor         Decimal                 @db.Decimal(10, 2)
+  descricao     String?
+  tipo          TipoCreditoFuncionario  @default(INDIVIDUAL)
+  loteId        String?
+  registradoPor String
+  registradoEm  DateTime                @default(now())
+  liquidado     Boolean                 @default(false)
+  liquidadoEm   DateTime?
+}
+
+model ConsumoFuncionario {
+  id            String             @id @default(cuid())
+  funcionarioId String
+  funcionario   FuncionarioExterno @relation(fields: [funcionarioId], references: [id])
+  productId     String
+  product       Product            @relation(fields: [productId], references: [id])
+  quantidade    Decimal            @db.Decimal(10, 3)
+  precoUnit     Decimal            @db.Decimal(10, 2)
+  subtotal      Decimal            @db.Decimal(10, 2)
+  registradoPor String
+  registradoEm  DateTime           @default(now())
+  liquidado     Boolean            @default(false)
+  liquidadoEm   DateTime?
 }
