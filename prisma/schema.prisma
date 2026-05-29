@@ -118,6 +118,7 @@ enum FormaPagamento {
   CREDITO
   DEBITO
   PIX
+  VOUCHER
 }
 
 enum UserRole {

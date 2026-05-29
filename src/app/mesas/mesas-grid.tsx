@@ -31,7 +31,7 @@ type MesaComPedido = {
   orders: PedidoComItens[];
 };
 
-type FormaPagamento = "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX";
+type FormaPagamento = "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" | "VOUCHER";
 type PagamentoSplit = { forma: FormaPagamento; valor: string };
 
 const STATUS = {
@@ -55,10 +55,11 @@ const CATEGORIAS = [
 ];
 
 const PAGAMENTOS: { valor: FormaPagamento; label: string }[] = [
-  { valor: "DINHEIRO", label: "Dinheiro" },
-  { valor: "CREDITO",  label: "Crédito"  },
-  { valor: "DEBITO",   label: "Débito"   },
-  { valor: "PIX",      label: "Pix"      },
+  { valor: "DINHEIRO", label: "Dinheiro"      },
+  { valor: "CREDITO",  label: "Crédito"       },
+  { valor: "DEBITO",   label: "Débito"        },
+  { valor: "PIX",      label: "Pix"           },
+  { valor: "VOUCHER",  label: "Voucher VR/VA" },
 ];
 
 function moeda(v: string | number) {

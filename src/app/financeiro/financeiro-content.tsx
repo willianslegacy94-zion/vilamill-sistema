@@ -99,6 +99,7 @@ export default function FinanceiroContent() {
     CREDITO:  somaForma("CREDITO"),
     DEBITO:   somaForma("DEBITO"),
     PIX:      somaForma("PIX"),
+    VOUCHER:  somaForma("VOUCHER"),
     CARTAO:   somaForma("CARTAO"),
   };
 
@@ -107,12 +108,13 @@ export default function FinanceiroContent() {
       ? formatData(`${fromStr}T12:00:00`)
       : `${formatData(`${fromStr}T12:00:00`)} → ${formatData(`${toStr}T12:00:00`)}`;
 
-  const pagLabel: Record<string, string> = { DINHEIRO: "Dinheiro", CREDITO: "Crédito", DEBITO: "Débito", PIX: "Pix", CARTAO: "Cartão" };
+  const pagLabel: Record<string, string> = { DINHEIRO: "Dinheiro", CREDITO: "Crédito", DEBITO: "Débito", PIX: "Pix", VOUCHER: "Voucher VR/VA", CARTAO: "Cartão" };
   const pagColor: Record<string, string> = {
     DINHEIRO: "bg-green-100 text-green-700",
     CREDITO:  "bg-blue-100 text-blue-700",
     DEBITO:   "bg-indigo-100 text-indigo-700",
     PIX:      "bg-purple-100 text-purple-700",
+    VOUCHER:  "bg-amber-100 text-amber-700",
     CARTAO:   "bg-blue-100 text-blue-600",
   };
 
@@ -199,8 +201,8 @@ export default function FinanceiroContent() {
       </div>
 
       {/* Breakdown por forma de pagamento */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {(["DINHEIRO", "CREDITO", "DEBITO", "PIX"] as const).map((forma) => (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {(["DINHEIRO", "CREDITO", "DEBITO", "PIX", "VOUCHER"] as const).map((forma) => (
           <div key={forma} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-4">
             <span className="text-sm font-semibold text-slate-500">{pagLabel[forma]}</span>
             <span className="text-base font-bold text-slate-900">{moeda(porForma[forma])}</span>
