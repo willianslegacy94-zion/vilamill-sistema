@@ -2,7 +2,7 @@
 status: approved
 domain: governance
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-29
 owner: willians
 ---
 
@@ -129,7 +129,7 @@ auth            → autenticação (NextAuth), roles, middleware, alterar senha
 mesas           → abertura, pedidos, fechamento de mesas (PDV)
 cardapio        → produtos, preços, categorias, fichas técnicas
 estoque         → insumos, entradas/saídas, alertas de mínimo
-financeiro      → relatórios, despesas, cancelamentos
+financeiro      → relatórios, despesas, cancelamentos, extrato caixinha
 pagamentos      → métodos de pagamento, split payment, desconto com autorização
 parceiros       → caixinha, crédito/consumo de funcionários externos
 infra           → docker, prisma, deploy, banco de dados
@@ -181,6 +181,7 @@ vilamill-sistema/
 │   │   │   ├── admin/
 │   │   │   │   ├── change-password/  → POST — altera senha do admin (role ADMIN)
 │   │   │   │   └── verify-password/  → POST — verifica senha do admin (autoriza desconto)
+│   │   │   ├── financeiro/           → GET — pedidos, despesas, cancelamentos, caixinha
 │   │   │   └── parceiros/
 │   │   │       ├── funcionarios/[id] → DELETE soft delete (ativo=false, ADMIN)
 │   │   │       ├── credito/          → POST crédito individual ou coletivo
@@ -232,3 +233,4 @@ antes de modificar qualquer componente ou rota existente, o Claude deve:
 | v1.0 | 2026-05-24 | criação inicial — adaptado de 00-governance do workspace |
 | v1.1 | 2026-05-29 | adiciona domínios `parceiros` e `auth` expandido; rotas `/api/admin/*`; página `/alterar-senha`; regra de desconto com autorização admin |
 | v1.2 | 2026-05-29 | exclusão de parceiro (soft delete); favicon gerado do logo; detalha rotas `/api/parceiros/*` na estrutura |
+| v1.3 | 2026-05-29 | módulo financeiro passa a exibir extrato da caixinha (créditos + baixas) filtrado por período; layout da tela financeiro refatorado com melhor espaçamento e hierarquia visual; `/api/financeiro` estendido com `creditosCaixinha` e `consumosCaixinha` |

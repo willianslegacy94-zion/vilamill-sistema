@@ -20,30 +20,50 @@ export async function GET(request: NextRequest) {
   const inicioPeriodo = intervaloSP(fromStr).inicio;
   const fimPeriodo = intervaloSP(toStr).fim;
 
-  const [pedidosFechados, pedidosAbertos, cancelamentos, despesas] = await Promise.all([
-    prisma.order.findMany({
-      where: { paymentStatus: "PAGO", closedAt: { gte: inicioPeriodo, lte: fimPeriodo } },
-      include: { items: { include: { product: true } }, table: true },
-      orderBy: { closedAt: "desc" },
-    }),
-    prisma.order.findMany({
-      where: { paymentStatus: "PENDENTE" },
-      include: { items: { include: { product: true } }, table: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.cancelamentoLog.findMany({
-      where: { canceladoEm: { gte: inicioPeriodo, lte: fimPeriodo } },
-      orderBy: { canceladoEm: "desc" },
-    }),
-    prisma.despesa.findMany({
-      where: { data: { gte: inicioPeriodo, lte: fimPeriodo } },
-      orderBy: { data: "desc" },
-    }),
-  ]);
+  const [pedidosFechados, pedidosAbertos, cancelamentos, despesas, creditosCaixinha, consumosCaixinha] =
+    await Promise.all([
+      prisma.order.findMany({
+        where: { paymentStatus: "PAGO", closedAt: { gte: inicioPeriodo, lte: fimPeriodo } },
+        include: { items: { include: { product: true } }, table: true },
+        orderBy: { closedAt: "desc" },
+      }),
+      prisma.order.findMany({
+        where: { paymentStatus: "PENDENTE" },
+        include: { items: { include: { product: true } }, table: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.cancelamentoLog.findMany({
+        where: { canceladoEm: { gte: inicioPeriodo, lte: fimPeriodo } },
+        orderBy: { canceladoEm: "desc" },
+      }),
+      prisma.despesa.findMany({
+        where: { data: { gte: inicioPeriodo, lte: fimPeriodo } },
+        orderBy: { data: "desc" },
+      }),
+      prisma.creditoFuncionario.findMany({
+        where: { registradoEm: { gte: inicioPeriodo, lte: fimPeriodo } },
+        include: { funcionario: true },
+        orderBy: { registradoEm: "desc" },
+      }),
+      prisma.consumoFuncionario.findMany({
+        where: { registradoEm: { gte: inicioPeriodo, lte: fimPeriodo } },
+        include: { funcionario: true, product: true },
+        orderBy: { registradoEm: "desc" },
+      }),
+    ]);
 
   return NextResponse.json(
     JSON.parse(
-      JSON.stringify({ pedidosFechados, pedidosAbertos, cancelamentos, despesas, fromStr, toStr })
+      JSON.stringify({
+        pedidosFechados,
+        pedidosAbertos,
+        cancelamentos,
+        despesas,
+        creditosCaixinha,
+        consumosCaixinha,
+        fromStr,
+        toStr,
+      })
     )
   );
 }
