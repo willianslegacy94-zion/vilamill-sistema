@@ -305,9 +305,7 @@ export default function CaixinhaModal({
                             : "border-slate-300 text-slate-600 hover:bg-slate-50"
                         }`}
                       >
-                        {t === "COLETIVO"
-                          ? `Coletivo · ${funcsEmpresa.length} func.`
-                          : "Individual"}
+                        {t === "COLETIVO" ? "Coletivo" : "Individual"}
                       </button>
                     ))}
                   </div>
