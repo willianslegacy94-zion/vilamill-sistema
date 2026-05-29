@@ -1,6 +1,6 @@
 # Villa Mill Tamboré — Status do Projeto
 
-**Última atualização:** 2026-05-29 (sessão 2)
+**Última atualização:** 2026-05-29 (sessão 3)
 
 ---
 
@@ -62,10 +62,11 @@
 ### Módulo: Parceria Lava-Rápido (Caixinha)
 - Gestão de funcionários externos por empresa (`/parceiros` — ADMIN)
 - Cadastro de funcionário com seletor de empresa (Lava-Rápido / Villa Mill) — sem digitação livre
+- **Exclusão de parceiro** — soft delete (`ativo: false`) com confirmação inline na tabela; histórico de créditos e consumos preservado; `DELETE /api/parceiros/funcionarios/[id]` (ADMIN)
 - Crédito **individual** (nominativo) e **coletivo** (pool por empresa) — sem multiplicação por funcionário
 - Consumo de produtos do restaurante descontado do pool coletivo da empresa
 - Saldo do pool calculado em tempo real: `SUM(créditos COLETIVO) − SUM(consumos)` — sem campo desnormalizado
-- Bloqueio de consumo quando subtotal > poolSaldo (sem saldo negativo para parceiro externo)
+- Bloqueio de consumo quando subtotal > saldo do pool (sem saldo negativo para parceiro externo)
 - Modal Caixinha na home com seletor de segmento (Lava-Rápido / Villa Mill) — isolamento por empresa
 - Baixa de funcionário via modal em `/mesas` (caixa e admin)
 - ConsumoFuncionario isolado do faturamento real — não gera Order
@@ -76,6 +77,7 @@
 - PostgreSQL 16 em container Docker
 - Build multi-stage (deps → builder → runner) com imagem Alpine enxuta
 - `prisma migrate deploy` executado automaticamente no startup do container — migrations aplicadas a cada deploy sem intervenção manual
+- **Favicon** — `src/app/favicon.ico` gerado a partir do logo Villa Mill em 4 tamanhos (16, 32, 48, 64px via Sharp); substitui o ícone padrão Next.js
 
 ---
 

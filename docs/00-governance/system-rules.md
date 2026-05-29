@@ -181,7 +181,10 @@ vilamill-sistema/
 │   │   │   ├── admin/
 │   │   │   │   ├── change-password/  → POST — altera senha do admin (role ADMIN)
 │   │   │   │   └── verify-password/  → POST — verifica senha do admin (autoriza desconto)
-│   │   │   └── parceiros/            → crédito, consumo, funcionários externos
+│   │   │   └── parceiros/
+│   │   │       ├── funcionarios/[id] → DELETE soft delete (ativo=false, ADMIN)
+│   │   │       ├── credito/          → POST crédito individual ou coletivo
+│   │   │       └── consumo/          → POST consumo, valida saldo do pool
 │   │   ├── alterar-senha/  → página de troca de senha (ADMIN only)
 │   │   ├── mesas/          → PDV — gestão de mesas
 │   │   ├── cardapio/       → gestão do cardápio
@@ -228,3 +231,4 @@ antes de modificar qualquer componente ou rota existente, o Claude deve:
 |---|---|---|
 | v1.0 | 2026-05-24 | criação inicial — adaptado de 00-governance do workspace |
 | v1.1 | 2026-05-29 | adiciona domínios `parceiros` e `auth` expandido; rotas `/api/admin/*`; página `/alterar-senha`; regra de desconto com autorização admin |
+| v1.2 | 2026-05-29 | exclusão de parceiro (soft delete); favicon gerado do logo; detalha rotas `/api/parceiros/*` na estrutura |
