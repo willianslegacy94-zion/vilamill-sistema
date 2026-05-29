@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/services/prisma";
 
 export async function POST(request: NextRequest) {
+  try {
   const { funcionarioId, productId, quantidade, registradoPor } = await request.json();
 
   if (!funcionarioId || !productId || !quantidade || !registradoPor) {
@@ -66,4 +67,8 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json(consumo, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/parceiros/consumo:", error);
+    return NextResponse.json({ error: "Erro ao registrar consumo." }, { status: 500 });
+  }
 }
