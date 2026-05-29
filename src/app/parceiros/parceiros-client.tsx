@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Funcionario = {
@@ -27,6 +28,10 @@ export default function ParceirosClient() {
   const [novoNome, setNovoNome] = useState("");
   const [novaEmpresa, setNovaEmpresa] = useState("Lava-Rápido");
   const [salvando, setSalvando] = useState(false);
+
+  // Exclusão
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
   // Modal caixinha
   const [showCaixinhaModal, setShowCaixinhaModal] = useState(false);
@@ -107,6 +112,17 @@ export default function ParceirosClient() {
     }
   }
 
+  async function excluirFuncionario(id: string) {
+    setExcluindoId(id);
+    try {
+      await fetch(`/api/parceiros/funcionarios/${id}`, { method: "DELETE" });
+      setConfirmandoId(null);
+      carregar();
+    } finally {
+      setExcluindoId(null);
+    }
+  }
+
   const totalFuncionarios = funcionarios.length;
   const totalSaldo = funcionarios.reduce((s, f) => s + f.saldo, 0);
 
@@ -149,6 +165,7 @@ export default function ParceirosClient() {
                 <th className="px-4 py-3 text-left">Funcionário</th>
                 <th className="px-4 py-3 text-left">Empresa</th>
                 <th className="px-4 py-3 text-right">Saldo em Aberto</th>
+                <th className="px-4 py-3 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -158,6 +175,34 @@ export default function ParceirosClient() {
                   <td className="px-4 py-3 text-slate-500">{f.empresa}</td>
                   <td className={`px-4 py-3 text-right font-semibold ${f.saldo < 0 ? "text-red-600" : "text-emerald-600"}`}>
                     {moeda(f.saldo)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {confirmandoId === f.id ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs text-slate-500">Excluir?</span>
+                        <button
+                          onClick={() => excluirFuncionario(f.id)}
+                          disabled={excluindoId === f.id}
+                          className="rounded px-2 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {excluindoId === f.id ? "..." : "Sim"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmandoId(null)}
+                          className="rounded px-2 py-1 text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-50"
+                        >
+                          Não
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmandoId(f.id)}
+                        className="rounded p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Excluir parceiro"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
