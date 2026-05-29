@@ -1,6 +1,6 @@
 # Villa Mill Tamboré — Status do Projeto
 
-**Última atualização:** 2026-05-29
+**Última atualização:** 2026-05-29 (sessão 2)
 
 ---
 
@@ -13,6 +13,7 @@
 - **Pagamento simples** (Dinheiro, Crédito, Débito, Pix, Voucher VR/VA)
 - **Pagamento dividido (split)** — múltiplas formas de pagamento em um mesmo fechamento
 - Campo de desconto (R$) com total atualizado em tempo real
+- **Desconto com autorização de admin** — botão "Aplicar" ao lado do campo; CAIXA precisa informar a senha do admin para confirmar; ADMIN aplica diretamente
 - Fechamento de conta com baixa automática de estoque (via Ficha Técnica)
 - **Cancelamento de pedido** com motivo obrigatório e log no banco
 - **Modo Treinamento** — simula abertura, itens e fechamento sem persistir no banco
@@ -38,24 +39,29 @@
 - Registro e listagem de despesas do dia
 - Seção "Cancelamentos do dia" com motivo e responsável
 - **SWR polling em tempo real** — atualização a cada 3 segundos
+- **Coluna Pagamento** exibe split empilhado: badge colorido por método + valor fracionado discreto
+- **Edição de transações fechadas** — altera total (R$) e forma de pagamento (simples ou split) via modal; `PATCH /api/pedidos/[id]`
 
 ### Autenticação e Controle de Acesso
 - Login com email e senha (NextAuth v5)
 - Middleware protege todas as rotas — redireciona para `/login` sem sessão
 - Navbar dinâmica filtrada por role
+- **Alterar senha do Admin** — página `/alterar-senha` acessível pelo nome do usuário na navbar; valida senha atual via bcrypt antes de atualizar; rota protegida por role ADMIN (`POST /api/admin/change-password`)
+- **Verificação de senha Admin** — endpoint `POST /api/admin/verify-password` usado para autorizar desconto via CAIXA
 
 **Usuários cadastrados:**
 
-| Nome    | Email                 | Senha      | Role  | Acesso                          |
-|---------|-----------------------|------------|-------|---------------------------------|
-| Admin   | admin@villamill.com   | admin123   | ADMIN | Tudo                            |
-| Emilly  | emilly@villamill.com  | emilly123  | CAIXA | Mesas + Cardápio                |
-| Melissa | melissa@villamill.com | melissa123 | CAIXA | Mesas + Cardápio                |
+| Login       | Senha      | Role  | Acesso                          |
+|-------------|------------|-------|---------------------------------|
+| admin       | admin123   | ADMIN | Tudo                            |
+| caixa       | caixa123   | CAIXA | Mesas + Cardápio + Estoque      |
+| treinamento | —          | CAIXA | Modo Treinamento (sem banco)    |
 
-> Usuários com flag `isTrainee` acessam o **Modo Treinamento** — operações simuladas sem gravação no banco.
+> Login = campo `email` no banco (sem @domínio). Usuário `treinamento` ativa o Modo Treinamento via flag `isTrainee` no JWT.
 
 ### Módulo: Parceria Lava-Rápido (Caixinha)
 - Gestão de funcionários externos por empresa (`/parceiros` — ADMIN)
+- Cadastro de funcionário com seletor de empresa (Lava-Rápido / Villa Mill) — sem digitação livre
 - Crédito **individual** (nominativo) e **coletivo** (pool por empresa) — sem multiplicação por funcionário
 - Consumo de produtos do restaurante descontado do pool coletivo da empresa
 - Saldo do pool calculado em tempo real: `SUM(créditos COLETIVO) − SUM(consumos)` — sem campo desnormalizado
@@ -63,12 +69,13 @@
 - Modal Caixinha na home com seletor de segmento (Lava-Rápido / Villa Mill) — isolamento por empresa
 - Baixa de funcionário via modal em `/mesas` (caixa e admin)
 - ConsumoFuncionario isolado do faturamento real — não gera Order
+- **fix:** saldo da caixinha exibia sempre R$0,00 no modal (campo `poolSaldo` → `saldo` alinhado com a API)
 
 ### Deploy e Infraestrutura
 - **Hostinger VPS** com Docker Compose
 - PostgreSQL 16 em container Docker
 - Build multi-stage (deps → builder → runner) com imagem Alpine enxuta
-- Migrations versionadas com `prisma migrate deploy` no container
+- `prisma migrate deploy` executado automaticamente no startup do container — migrations aplicadas a cada deploy sem intervenção manual
 
 ---
 

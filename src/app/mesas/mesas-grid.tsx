@@ -70,6 +70,7 @@ export default function MesasGrid() {
   const { data: session } = useSession();
   const nomeUsuario = session?.user?.name ?? "Sistema";
   const isTrainee = (session?.user as any)?.isTrainee ?? false;
+  const role = (session?.user as any)?.role ?? "CAIXA";
   const { mesas: rawMesas, mutate } = useMesas();
   const mesas = rawMesas as MesaComPedido[];
 
@@ -82,6 +83,11 @@ export default function MesasGrid() {
   const [carregando, setCarregando] = useState(false);
   const [pagamentos, setPagamentos] = useState<PagamentoSplit[]>([{ forma: "DINHEIRO", valor: "" }]);
   const [desconto, setDesconto] = useState(0);
+  const [descontoInput, setDescontoInput] = useState(0);
+  const [showDescontoModal, setShowDescontoModal] = useState(false);
+  const [senhaAdmin, setSenhaAdmin] = useState("");
+  const [senhaError, setSenhaError] = useState("");
+  const [verificandoDesconto, setVerificandoDesconto] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   // Estado simulado para o modo treinamento (não persiste no banco)
@@ -104,6 +110,10 @@ export default function MesasGrid() {
   useEffect(() => {
     if (!mesaIdSelecionada) return;
     setDesconto(0);
+    setDescontoInput(0);
+    setSenhaAdmin("");
+    setSenhaError("");
+    setShowDescontoModal(false);
     setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
   }, [mesaIdSelecionada]);
 
@@ -408,22 +418,110 @@ export default function MesasGrid() {
                   </div>
 
                   {/* Desconto */}
-                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-3">
-                    <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Desconto R$</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={desconto}
-                      onChange={(e) => setDesconto(Math.max(0, Number(e.target.value)))}
-                      className="w-24 rounded-md border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                    />
+                  <div className="flex flex-col gap-1 rounded-lg bg-slate-50 px-3 py-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Desconto R$</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={descontoInput === 0 ? "" : descontoInput}
+                        onChange={(e) => setDescontoInput(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
+                        className="w-24 rounded-md border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (descontoInput <= 0) return;
+                          if (role === "ADMIN") {
+                            setDesconto(descontoInput);
+                            return;
+                          }
+                          setSenhaAdmin("");
+                          setSenhaError("");
+                          setShowDescontoModal(true);
+                        }}
+                        className="rounded-md bg-[#CC1111] px-3 py-2 text-xs font-semibold text-white hover:bg-[#aa0e0e] transition-colors disabled:opacity-40"
+                        disabled={descontoInput <= 0}
+                      >
+                        Aplicar
+                      </button>
+                      {desconto > 0 && (
+                        <span className="ml-auto text-sm font-bold text-green-700">
+                          = {moeda(Math.max(0, Number(pedidoAtivo.total) - desconto))}
+                        </span>
+                      )}
+                    </div>
                     {desconto > 0 && (
-                      <span className="ml-auto text-sm font-bold text-green-700">
-                        = {moeda(Math.max(0, Number(pedidoAtivo.total) - desconto))}
-                      </span>
+                      <p className="text-xs text-green-700 font-medium">
+                        ✓ Desconto de {moeda(desconto)} autorizado
+                      </p>
                     )}
                   </div>
+
+                  {/* Modal autorização de desconto */}
+                  {showDescontoModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                      <div className="w-80 rounded-xl bg-white p-5 shadow-xl">
+                        <p className="mb-1 text-sm font-bold text-slate-800">Autorização de Desconto</p>
+                        <p className="mb-4 text-xs text-slate-500">
+                          Digite a senha do administrador para aplicar desconto de{" "}
+                          <span className="font-semibold text-slate-700">{moeda(descontoInput)}</span>.
+                        </p>
+                        <input
+                          type="password"
+                          autoFocus
+                          value={senhaAdmin}
+                          onChange={(e) => { setSenhaAdmin(e.target.value); setSenhaError(""); }}
+                          placeholder="Senha do administrador"
+                          className="mb-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#CC1111] focus:outline-none focus:ring-1 focus:ring-[#CC1111]"
+                          onKeyDown={(e) => e.key === "Enter" && !verificandoDesconto && (async () => {
+                            setVerificandoDesconto(true);
+                            setSenhaError("");
+                            try {
+                              const r = await fetch("/api/admin/verify-password", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ password: senhaAdmin }),
+                              });
+                              if (r.ok) { setDesconto(descontoInput); setShowDescontoModal(false); }
+                              else { const d = await r.json(); setSenhaError(d.error ?? "Senha incorreta"); }
+                            } catch { setSenhaError("Erro de conexão"); }
+                            setVerificandoDesconto(false);
+                          })()}
+                        />
+                        {senhaError && <p className="mb-2 text-xs font-medium text-red-600">{senhaError}</p>}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowDescontoModal(false)}
+                            className="flex-1 rounded-md border border-slate-300 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            disabled={verificandoDesconto || !senhaAdmin}
+                            onClick={async () => {
+                              setVerificandoDesconto(true);
+                              setSenhaError("");
+                              try {
+                                const r = await fetch("/api/admin/verify-password", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ password: senhaAdmin }),
+                                });
+                                if (r.ok) { setDesconto(descontoInput); setShowDescontoModal(false); }
+                                else { const d = await r.json(); setSenhaError(d.error ?? "Senha incorreta"); }
+                              } catch { setSenhaError("Erro de conexão"); }
+                              setVerificandoDesconto(false);
+                            }}
+                            className="flex-1 rounded-md bg-[#CC1111] py-2 text-xs font-semibold text-white hover:bg-[#aa0e0e] disabled:opacity-50"
+                          >
+                            {verificandoDesconto ? "Verificando..." : "Confirmar"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Adicionar item */}
                   <div className="space-y-2 rounded-lg bg-slate-50 p-3">

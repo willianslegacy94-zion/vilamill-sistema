@@ -67,7 +67,17 @@ export default function Navbar() {
         {/* Usuário + logout */}
         {session && (
           <div className="flex items-center gap-2 border-l border-white/10 pl-3">
-            <span className="hidden text-sm text-slate-400 sm:block">{session.user?.name}</span>
+            {role === "ADMIN" ? (
+              <Link
+                href="/alterar-senha"
+                className="hidden text-sm text-slate-400 hover:text-[#F4C430] transition-colors sm:block"
+                title="Alterar senha"
+              >
+                {session.user?.name}
+              </Link>
+            ) : (
+              <span className="hidden text-sm text-slate-400 sm:block">{session.user?.name}</span>
+            )}
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-colors"

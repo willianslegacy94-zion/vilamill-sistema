@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 
-type Funcionario = { id: string; nome: string; empresa: string; poolSaldo: number };
+type Funcionario = { id: string; nome: string; empresa: string; saldo: number };
 type Produto = { id: string; nome: string; preco: string };
 
 function moeda(v: number | string) {
@@ -79,7 +79,7 @@ export default function CaixinhaModal({
   const prodSelecionado = produtos.find((p) => p.id === prodId);
   const subtotal = prodSelecionado ? Number(prodSelecionado.preco) * qtd : 0;
   // Pool é compartilhado — todos do segmento têm o mesmo saldo disponível
-  const poolSaldo = funcsEmpresa[0]?.poolSaldo ?? 0;
+  const poolSaldo = funcsEmpresa[0]?.saldo ?? 0;
   const semSaldo = subtotal > poolSaldo;
 
   async function registrarConsumo() {
@@ -355,12 +355,6 @@ export default function CaixinhaModal({
                     />
                   </div>
 
-                  {tipo === "COLETIVO" && Number(valor) > 0 && (
-                    <div className="rounded-lg bg-violet-50 px-4 py-3 text-sm text-violet-700">
-                      <strong>{funcsEmpresa.length}</strong> funcionário(s) de <strong>{empresaSel}</strong>{" "}
-                      receberão <strong>{moeda(Number(valor))}</strong> cada
-                    </div>
-                  )}
 
                   {erroCaixinha && <p className="text-xs font-semibold text-red-600">{erroCaixinha}</p>}
                   {okCaixinha && (
