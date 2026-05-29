@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -31,6 +32,15 @@ type Pedido = {
   pagamentosSplit: PagEntry[] | null; closedAt: string | null; createdAt: string;
   items: Item[]; table: { numero: number };
 };
+type EditForm = { total: string; formaPagamento: string };
+
+const PAGAMENTOS_OPTIONS = [
+  { valor: "DINHEIRO", label: "Dinheiro" },
+  { valor: "CREDITO",  label: "Crédito" },
+  { valor: "DEBITO",   label: "Débito" },
+  { valor: "PIX",      label: "Pix" },
+  { valor: "VOUCHER",  label: "Voucher VR/VA" },
+];
 type PedidoAberto = {
   id: string; total: string | number; createdAt: string;
   items: Item[]; table: { numero: number };
@@ -70,7 +80,42 @@ export default function FinanceiroContent() {
   const fromStr = params.get("from") ?? primeiroDiaMes();
   const toStr   = params.get("to")   ?? hojeStr();
 
-  const { data, isLoading, isValidating } = useFinanceiro(fromStr, toStr) as any;
+  const [editando, setEditando] = useState<Pedido | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ total: "", formaPagamento: "DINHEIRO" });
+  const [salvando, setSalvando] = useState(false);
+
+  const { data, isLoading, isValidating, mutate } = useFinanceiro(fromStr, toStr) as any;
+
+  async function salvarEdicao() {
+    if (!editando) return;
+    setSalvando(true);
+    try {
+      const res = await fetch(`/api/pedidos/${editando.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          total: Number(editForm.total),
+          formaPagamento: editForm.formaPagamento,
+          pagamentosSplit: null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+      setEditando(null);
+    } catch {
+      alert("Erro ao salvar. Tente novamente.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function abrirEdicao(p: Pedido) {
+    setEditando(p);
+    setEditForm({
+      total: Number(p.total).toFixed(2),
+      formaPagamento: p.formaPagamento ?? "DINHEIRO",
+    });
+  }
 
   // Show skeleton only on true initial load (no data at all).
   // keepPreviousData ensures data stays populated during date-range key changes,
@@ -119,6 +164,7 @@ export default function FinanceiroContent() {
   };
 
   return (
+  <>
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -231,6 +277,7 @@ export default function FinanceiroContent() {
                   <th className="px-4 py-3 text-left">Pagamento</th>
                   <th className="px-4 py-3 text-right">CMV</th>
                   <th className="px-4 py-3 text-right">Total</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -249,13 +296,21 @@ export default function FinanceiroContent() {
                       </td>
                       <td className="px-4 py-3 text-right text-red-600">{moeda(cmvPedido)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-green-700">{moeda(Number(p.total))}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => abrirEdicao(p)}
+                          className="text-xs font-medium text-blue-500 hover:text-blue-700"
+                        >
+                          Editar
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot className="border-t-2 border-slate-200 bg-slate-50">
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm font-bold text-slate-700">Total do período</td>
+                  <td colSpan={4} className="px-4 py-3 text-sm font-bold text-slate-700">Total do período</td>
                   <td className="px-4 py-3 text-right text-sm font-bold text-red-700">{moeda(cmv)}</td>
                   <td className="px-4 py-3 text-right text-base font-bold text-green-700">{moeda(receitaBruta)}</td>
                 </tr>
@@ -366,5 +421,65 @@ export default function FinanceiroContent() {
         </section>
       )}
     </main>
+
+    {/* Modal de edição de transação */}
+    {editando && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+          <h3 className="mb-1 text-lg font-bold text-slate-900">Editar Transação</h3>
+          <p className="mb-4 text-sm text-slate-500">
+            Mesa {editando.table.numero} · {editando.closedAt ? `${formatData(editando.closedAt)} ${formatHora(editando.closedAt)}` : "—"}
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Total (R$)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={editForm.total}
+                onChange={(e) => setEditForm((f) => ({ ...f, total: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Forma de Pagamento</label>
+              <select
+                value={editForm.formaPagamento}
+                onChange={(e) => setEditForm((f) => ({ ...f, formaPagamento: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                {PAGAMENTOS_OPTIONS.map(({ valor, label }) => (
+                  <option key={valor} value={valor}>{label}</option>
+                ))}
+              </select>
+              {editando.pagamentosSplit && editando.pagamentosSplit.length > 0 && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Transação tinha split payment — ao salvar será convertida para forma única.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <button
+              onClick={() => setEditando(null)}
+              className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={salvarEdicao}
+              disabled={salvando}
+              className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {salvando ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }
