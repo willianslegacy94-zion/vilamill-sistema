@@ -32,7 +32,7 @@ type Pedido = {
   pagamentosSplit: PagEntry[] | null; closedAt: string | null; createdAt: string;
   items: Item[]; table: { numero: number };
 };
-type EditForm = { total: string; formaPagamento: string };
+type EditPag = { forma: string; valor: string };
 
 const PAGAMENTOS_OPTIONS = [
   { valor: "DINHEIRO", label: "Dinheiro" },
@@ -81,22 +81,56 @@ export default function FinanceiroContent() {
   const toStr   = params.get("to")   ?? hojeStr();
 
   const [editando, setEditando] = useState<Pedido | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ total: "", formaPagamento: "DINHEIRO" });
+  const [editTotal, setEditTotal] = useState("");
+  const [editPagamentos, setEditPagamentos] = useState<EditPag[]>([]);
   const [salvando, setSalvando] = useState(false);
 
   const { data, isLoading, isValidating, mutate } = useFinanceiro(fromStr, toStr) as any;
 
+  function abrirEdicao(p: Pedido) {
+    setEditando(p);
+    setEditTotal(Number(p.total).toFixed(2));
+    if (p.pagamentosSplit && p.pagamentosSplit.length > 0) {
+      setEditPagamentos(p.pagamentosSplit.map((e) => ({ forma: e.forma, valor: String(e.valor) })));
+    } else {
+      setEditPagamentos([{ forma: p.formaPagamento ?? "DINHEIRO", valor: Number(p.total).toFixed(2) }]);
+    }
+  }
+
+  function atualizarEditPag(i: number, field: keyof EditPag, value: string) {
+    setEditPagamentos((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
+  }
+
+  function adicionarEditPag() {
+    setEditPagamentos((prev) => {
+      const total = Number(editTotal) || 0;
+      const pago  = prev.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+      const falta = Math.max(0, Math.round((total - pago) * 100) / 100);
+      return [...prev, { forma: "DINHEIRO", valor: falta > 0 ? falta.toFixed(2) : "" }];
+    });
+  }
+
+  function removerEditPag(i: number) {
+    setEditPagamentos((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   async function salvarEdicao() {
     if (!editando) return;
     setSalvando(true);
+    const validos = editPagamentos
+      .filter((p) => Number(p.valor) > 0)
+      .map((p) => ({ forma: p.forma, valor: Number(p.valor) }));
+    const primario = validos.length > 0
+      ? validos.reduce((a, b) => (b.valor > a.valor ? b : a))
+      : { forma: "DINHEIRO", valor: 0 };
     try {
       const res = await fetch(`/api/pedidos/${editando.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          total: Number(editForm.total),
-          formaPagamento: editForm.formaPagamento,
-          pagamentosSplit: null,
+          total: Number(editTotal),
+          formaPagamento: primario.forma,
+          pagamentosSplit: validos.length > 1 ? validos : null,
         }),
       });
       if (!res.ok) throw new Error();
@@ -107,14 +141,6 @@ export default function FinanceiroContent() {
     } finally {
       setSalvando(false);
     }
-  }
-
-  function abrirEdicao(p: Pedido) {
-    setEditando(p);
-    setEditForm({
-      total: Number(p.total).toFixed(2),
-      formaPagamento: p.formaPagamento ?? "DINHEIRO",
-    });
   }
 
   // Show skeleton only on true initial load (no data at all).
@@ -431,34 +457,85 @@ export default function FinanceiroContent() {
             Mesa {editando.table.numero} · {editando.closedAt ? `${formatData(editando.closedAt)} ${formatHora(editando.closedAt)}` : "—"}
           </p>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
+            {/* Total */}
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-600">Total (R$)</label>
               <input
                 type="number"
                 min={0}
                 step={0.01}
-                value={editForm.total}
-                onChange={(e) => setEditForm((f) => ({ ...f, total: e.target.value }))}
+                value={editTotal}
+                onChange={(e) => setEditTotal(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Forma de Pagamento</label>
-              <select
-                value={editForm.formaPagamento}
-                onChange={(e) => setEditForm((f) => ({ ...f, formaPagamento: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-              >
-                {PAGAMENTOS_OPTIONS.map(({ valor, label }) => (
-                  <option key={valor} value={valor}>{label}</option>
-                ))}
-              </select>
-              {editando.pagamentosSplit && editando.pagamentosSplit.length > 0 && (
-                <p className="mt-1 text-xs text-amber-600">
-                  Transação tinha split payment — ao salvar será convertida para forma única.
-                </p>
-              )}
+
+            {/* Pagamentos */}
+            <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pagamento</p>
+
+              {editPagamentos.map((pag, i) => {
+                const total  = Number(editTotal) || 0;
+                const pago   = editPagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+                const restante = Math.round((total - pago) * 100) / 100;
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <select
+                      value={pag.forma}
+                      onChange={(e) => atualizarEditPag(i, "forma", e.target.value)}
+                      className="rounded-md border border-slate-300 bg-white px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    >
+                      {PAGAMENTOS_OPTIONS.map(({ valor, label }) => (
+                        <option key={valor} value={valor}>{label}</option>
+                      ))}
+                    </select>
+                    <div className="relative flex-1">
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={pag.valor}
+                        onChange={(e) => atualizarEditPag(i, "valor", e.target.value)}
+                        placeholder="0,00"
+                        className="w-full rounded-md border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      />
+                    </div>
+                    {editPagamentos.length > 1 && (
+                      <button
+                        onClick={() => removerEditPag(i)}
+                        className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                      >×</button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Restante */}
+              {(() => {
+                const total    = Number(editTotal) || 0;
+                const pago     = editPagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+                const restante = Math.round((total - pago) * 100) / 100;
+                return (
+                  <>
+                    <div className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-semibold ${
+                      Math.abs(restante) < 0.01 ? "bg-green-50 text-green-700" : "bg-slate-50 text-slate-600"
+                    }`}>
+                      <span>Restante</span>
+                      <span>{restante.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                    </div>
+                    {restante > 0.005 && (
+                      <button
+                        onClick={adicionarEditPag}
+                        className="w-full rounded-md border border-dashed border-slate-300 py-2 text-sm text-slate-500 hover:border-slate-500 hover:text-slate-700 transition-colors"
+                      >
+                        + Adicionar forma de pagamento
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
