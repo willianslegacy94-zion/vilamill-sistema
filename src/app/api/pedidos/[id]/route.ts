@@ -38,18 +38,26 @@ export async function DELETE(
   });
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
 
-  await prisma.$transaction([
-    prisma.cancelamentoLog.create({
-      data: {
-        mesaNumero: pedido.table.numero,
-        motivoCancelamento: motivoCancelamento || null,
-        canceladoPor: canceladoPor || "Sistema",
-      },
-    }),
-    prisma.orderItem.deleteMany({ where: { orderId: id } }),
-    prisma.order.delete({ where: { id } }),
-    prisma.table.update({ where: { id: pedido.mesaId }, data: { status: "LIVRE" } }),
-  ]);
+  if (pedido.paymentStatus === "PAGO") {
+    // Exclusão administrativa (financeiro) — sem log de cancelamento, mesa já LIVRE
+    await prisma.$transaction([
+      prisma.orderItem.deleteMany({ where: { orderId: id } }),
+      prisma.order.delete({ where: { id } }),
+    ]);
+  } else {
+    await prisma.$transaction([
+      prisma.cancelamentoLog.create({
+        data: {
+          mesaNumero: pedido.table.numero,
+          motivoCancelamento: motivoCancelamento || null,
+          canceladoPor: canceladoPor || "Sistema",
+        },
+      }),
+      prisma.orderItem.deleteMany({ where: { orderId: id } }),
+      prisma.order.delete({ where: { id } }),
+      prisma.table.update({ where: { id: pedido.mesaId }, data: { status: "LIVRE" } }),
+    ]);
+  }
 
   return NextResponse.json({ ok: true });
 }
