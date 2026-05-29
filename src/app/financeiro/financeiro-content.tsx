@@ -316,9 +316,22 @@ export default function FinanceiroContent() {
                         {p.closedAt ? `${formatData(p.closedAt)} ${formatHora(p.closedAt)}` : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${pagColor[p.formaPagamento ?? ""] ?? "bg-slate-100 text-slate-500"}`}>
-                          {pagLabel[p.formaPagamento ?? ""] ?? "—"}
-                        </span>
+                        {p.pagamentosSplit && p.pagamentosSplit.length > 1 ? (
+                          <div className="flex flex-col gap-1">
+                            {p.pagamentosSplit.map((e, i) => (
+                              <div key={i} className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${pagColor[e.forma] ?? "bg-slate-100 text-slate-500"}`}>
+                                  {pagLabel[e.forma] ?? e.forma}
+                                </span>
+                                <span className="text-xs text-slate-400 font-normal">{moeda(e.valor)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${pagColor[p.formaPagamento ?? ""] ?? "bg-slate-100 text-slate-500"}`}>
+                            {pagLabel[p.formaPagamento ?? ""] ?? "—"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-red-600">{moeda(cmvPedido)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-green-700">{moeda(Number(p.total))}</td>
