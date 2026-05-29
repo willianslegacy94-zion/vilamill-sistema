@@ -1,6 +1,6 @@
 # Villa Mill Tamboré — Status do Projeto
 
-**Última atualização:** 2026-05-14
+**Última atualização:** 2026-05-29
 
 ---
 
@@ -10,7 +10,7 @@
 - Visualização das mesas com status: **Livre** (verde), **Ocupada** (vermelho), **Conta** (vermelho escuro)
 - Abertura de mesa e criação de pedido
 - Adição e remoção de itens em tempo real com busca e filtro por categoria
-- **Pagamento simples** (Dinheiro, Crédito, Débito, Pix)
+- **Pagamento simples** (Dinheiro, Crédito, Débito, Pix, Voucher VR/VA)
 - **Pagamento dividido (split)** — múltiplas formas de pagamento em um mesmo fechamento
 - Campo de desconto (R$) com total atualizado em tempo real
 - Fechamento de conta com baixa automática de estoque (via Ficha Técnica)
@@ -33,7 +33,7 @@
 
 ### Módulo: Financeiro
 - Relatório diário de vendas com filtro de data
-- Faturamento por forma de pagamento (Dinheiro, Crédito, Débito, Pix)
+- Faturamento por forma de pagamento (Dinheiro, Crédito, Débito, Pix, Voucher VR/VA)
 - Ticket médio e total de pedidos fechados
 - Registro e listagem de despesas do dia
 - Seção "Cancelamentos do dia" com motivo e responsável
@@ -53,6 +53,16 @@
 | Melissa | melissa@villamill.com | melissa123 | CAIXA | Mesas + Cardápio                |
 
 > Usuários com flag `isTrainee` acessam o **Modo Treinamento** — operações simuladas sem gravação no banco.
+
+### Módulo: Parceria Lava-Rápido (Caixinha)
+- Gestão de funcionários externos por empresa (`/parceiros` — ADMIN)
+- Crédito **individual** (nominativo) e **coletivo** (pool por empresa) — sem multiplicação por funcionário
+- Consumo de produtos do restaurante descontado do pool coletivo da empresa
+- Saldo do pool calculado em tempo real: `SUM(créditos COLETIVO) − SUM(consumos)` — sem campo desnormalizado
+- Bloqueio de consumo quando subtotal > poolSaldo (sem saldo negativo para parceiro externo)
+- Modal Caixinha na home com seletor de segmento (Lava-Rápido / Villa Mill) — isolamento por empresa
+- Baixa de funcionário via modal em `/mesas` (caixa e admin)
+- ConsumoFuncionario isolado do faturamento real — não gera Order
 
 ### Deploy e Infraestrutura
 - **Hostinger VPS** com Docker Compose
@@ -109,3 +119,6 @@ NEXTAUTH_URL=        # URL da aplicação
 | `20260511000002_add_credito_debito_pagamento` | Enum CREDITO e DEBITO em FormaPagamento |
 | `20260512000000_add_despesa` | Model Despesa |
 | `20260514000000_add_pagamentos_split` | pagamentosSplit JSONB em Order |
+| `20260527110042_parceria_lava_rapido` | FuncionarioExterno, CreditoFuncionario, ConsumoFuncionario, TipoCreditoFuncionario |
+| `20260527144124_credito_pool_coletivo` | CreditoFuncionario.funcionarioId nullable + campo empresa (pool coletivo) |
+| `20260529040638_add_voucher_pagamento` | Valor VOUCHER no enum FormaPagamento |
