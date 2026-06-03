@@ -90,6 +90,12 @@ export default function MesasGrid() {
   const [verificandoDesconto, setVerificandoDesconto] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
+  const [caixaNome, setCaixaNome] = useState("");
+  const [caixasDisponiveis, setCaixasDisponiveis] = useState<{ id: string; nome: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/caixas").then((r) => r.json()).then(setCaixasDisponiveis).catch(() => {});
+  }, []);
   // Estado simulado para o modo treinamento (não persiste no banco)
   const [simulado, setSimulado] = useState<Record<string, MesaComPedido>>({});
 
@@ -115,6 +121,7 @@ export default function MesasGrid() {
     setSenhaError("");
     setShowDescontoModal(false);
     setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
+    setCaixaNome("");
   }, [mesaIdSelecionada]);
 
   useEffect(() => {
@@ -155,6 +162,7 @@ export default function MesasGrid() {
     setMesaIdSelecionada(null);
     setDesconto(0);
     setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
+    setCaixaNome("");
   }
 
   function atualizarPagamento(i: number, field: keyof PagamentoSplit, value: string) {
@@ -188,7 +196,7 @@ export default function MesasGrid() {
   }
 
   function abrirMesa() {
-    if (!mesaSelecionada) return;
+    if (!mesaSelecionada || !caixaNome) return;
     if (isTrainee) {
       const fakePedido: PedidoComItens = {
         id: `treino-${Date.now()}`,
@@ -204,7 +212,7 @@ export default function MesasGrid() {
       fetch("/api/pedidos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mesaId: mesaSelecionada.id }),
+        body: JSON.stringify({ mesaId: mesaSelecionada.id, caixaNome }),
       })
     );
   }
@@ -376,9 +384,26 @@ export default function MesasGrid() {
               </div>
 
               {mesaEfetiva?.status === "LIVRE" && (
-                <Button onClick={abrirMesa} disabled={carregando} className="w-full py-4 text-base">
-                  {carregando ? "Abrindo..." : "Abrir Mesa"}
-                </Button>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Caixa responsável <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={caixaNome}
+                      onChange={(e) => setCaixaNome(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    >
+                      <option value="">Selecione o caixa...</option>
+                      {caixasDisponiveis.map((c) => (
+                        <option key={c.id} value={c.nome}>{c.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button onClick={abrirMesa} disabled={carregando || !caixaNome} className="w-full py-4 text-base">
+                    {carregando ? "Abrindo..." : "Abrir Mesa"}
+                  </Button>
+                </div>
               )}
 
               {pedidoAtivo && (

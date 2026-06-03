@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +8,15 @@ import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import DateRangeFilter from "./date-selector";
 import { useFinanceiro } from "@/hooks/useAppData";
+
+function toDatetimeLocal(isoStr: string | null): string {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  return d.toLocaleString("sv-SE", { timeZone: "America/Sao_Paulo" }).replace(" ", "T").slice(0, 16);
+}
+function fromDatetimeLocal(localStr: string): string {
+  return new Date(localStr + ":00-03:00").toISOString();
+}
 
 function moeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -30,15 +39,30 @@ function primeiroDiaMes() {
 }
 
 type PagEntry = { forma: string; valor: number };
-type Item = { custoUnit: string | number; quantidade: string | number; product: { nome: string } };
+type Item = {
+  id: string; productId: string;
+  custoUnit: string | number; precoUnit: string | number;
+  quantidade: string | number; subtotal: string | number;
+  product: { id: string; nome: string; preco: string | number };
+};
 type Pedido = {
-  id: string; total: string | number; formaPagamento: string | null;
+  id: string; total: string | number; desconto: string | number; formaPagamento: string | null;
   pagamentosSplit: PagEntry[] | null; closedAt: string | null; createdAt: string;
+  caixaNome: string | null;
   items: Item[]; table: { numero: number };
 };
 type EditPag = { forma: string; valor: string };
+type EditItem = { id: string; productId: string; nome: string; precoUnit: number; custoUnit: number; quantidade: number };
+type Produto = { id: string; nome: string; preco: string | number; costPrice: string | number; categoria: string };
+
+const CATEGORIAS_CARDAPIO = [
+  "Pratos do Dia", "Todos os Dias", "Acompanhamentos",
+  "Lanches Tradicionais", "Lanches na Baguete", "Lanches Artesanais",
+  "Porções", "Sucos", "Refrigerantes", "Cervejas", "Sobremesas",
+];
 type PedidoAberto = {
   id: string; total: string | number; createdAt: string;
+  caixaNome: string | null;
   items: Item[]; table: { numero: number };
 };
 type Cancelamento = {
@@ -129,8 +153,27 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   // ── Estado: edição de transação ──────────────────────────────
   const [editando, setEditando] = useState<Pedido | null>(null);
   const [editTotal, setEditTotal] = useState("");
+  const [editDesconto, setEditDesconto] = useState("");
+  const [editCaixaNome, setEditCaixaNome] = useState("");
   const [editPagamentos, setEditPagamentos] = useState<EditPag[]>([]);
+  const [editCreatedAt, setEditCreatedAt] = useState("");
+  const [editClosedAt, setEditClosedAt] = useState("");
+  const [caixasDisponiveis, setCaixasDisponiveis] = useState<{ id: string; nome: string }[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [editItems, setEditItems] = useState<EditItem[]>([]);
+  const [editNovoProductId, setEditNovoProductId] = useState("");
+  const [editNovaQtd, setEditNovaQtd] = useState(1);
+  const [editBusca, setEditBusca] = useState("");
+  const [editCategoria, setEditCategoria] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/caixas").then((r) => r.json()).then(setCaixasDisponiveis).catch(() => {});
+    fetch("/api/produtos").then((r) => r.json()).then((data: Produto[]) => {
+      setProdutos(data);
+      if (data.length > 0) setEditNovoProductId(data[0].id);
+    }).catch(() => {});
+  }, []);
 
   // ── Estado: exclusão (compartilhado) ─────────────────────────
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
@@ -149,11 +192,75 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   function abrirEdicao(p: Pedido) {
     setEditando(p);
     setEditTotal(Number(p.total).toFixed(2));
+    setEditDesconto(Number(p.desconto ?? 0).toFixed(2));
+    setEditCaixaNome(p.caixaNome ?? "");
+    setEditCreatedAt(toDatetimeLocal(p.createdAt));
+    setEditClosedAt(toDatetimeLocal(p.closedAt));
+    setEditItems(p.items.map((i) => ({
+      id: i.id,
+      productId: i.productId,
+      nome: i.product.nome,
+      precoUnit: Number(i.precoUnit),
+      custoUnit: Number(i.custoUnit),
+      quantidade: Number(i.quantidade),
+    })));
+    setEditBusca("");
+    setEditCategoria(null);
+    setEditNovaQtd(1);
     if (p.pagamentosSplit && p.pagamentosSplit.length > 0) {
       setEditPagamentos(p.pagamentosSplit.map((e) => ({ forma: e.forma, valor: String(e.valor) })));
     } else {
       setEditPagamentos([{ forma: p.formaPagamento ?? "DINHEIRO", valor: Number(p.total).toFixed(2) }]);
     }
+  }
+
+  function recalcularTotal(items: EditItem[], desconto: string) {
+    const sub = items.reduce((s, i) => s + i.precoUnit * i.quantidade, 0);
+    return Math.max(0, sub - (Number(desconto) || 0)).toFixed(2);
+  }
+
+  function alterarQtdItem(productId: string, novaQtd: number) {
+    if (novaQtd <= 0) return;
+    setEditItems((prev) => {
+      const next = prev.map((i) => i.productId === productId ? { ...i, quantidade: novaQtd } : i);
+      setEditTotal(recalcularTotal(next, editDesconto));
+      return next;
+    });
+  }
+
+  function removerEditItem(productId: string) {
+    setEditItems((prev) => {
+      const next = prev.filter((i) => i.productId !== productId);
+      setEditTotal(recalcularTotal(next, editDesconto));
+      return next;
+    });
+  }
+
+  function adicionarEditItem() {
+    if (!editNovoProductId) return;
+    const produto = produtos.find((p) => p.id === editNovoProductId);
+    if (!produto) return;
+    setEditItems((prev) => {
+      const existente = prev.find((i) => i.productId === editNovoProductId);
+      let next: EditItem[];
+      if (existente) {
+        next = prev.map((i) => i.productId === editNovoProductId
+          ? { ...i, quantidade: i.quantidade + editNovaQtd }
+          : i);
+      } else {
+        next = [...prev, {
+          id: "",
+          productId: produto.id,
+          nome: produto.nome,
+          precoUnit: Number(produto.preco),
+          custoUnit: Number(produto.costPrice),
+          quantidade: editNovaQtd,
+        }];
+      }
+      setEditTotal(recalcularTotal(next, editDesconto));
+      return next;
+    });
+    setEditNovaQtd(1);
   }
   function atualizarEditPag(i: number, field: keyof EditPag, value: string) {
     setEditPagamentos((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
@@ -172,20 +279,56 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   async function salvarEdicao() {
     if (!editando) return;
     setSalvando(true);
-    const validos = editPagamentos
-      .filter((p) => Number(p.valor) > 0)
-      .map((p) => ({ forma: p.forma, valor: Number(p.valor) }));
-    const primario = validos.length > 0
-      ? validos.reduce((a, b) => (b.valor > a.valor ? b : a))
-      : { forma: "DINHEIRO", valor: 0 };
     try {
-      const res = await fetch(`/api/pedidos/${editando.id}`, {
+      const orderId = editando.id;
+      const itemsOriginais = editando.items;
+
+      // 1. Remover itens deletados
+      for (const orig of itemsOriginais) {
+        if (!editItems.find((i) => i.productId === orig.productId)) {
+          await fetch(`/api/pedidos/${orderId}/items/${orig.id}`, { method: "DELETE" });
+        }
+      }
+
+      // 2. Atualizar qtd ou criar itens novos
+      for (const item of editItems) {
+        const orig = itemsOriginais.find((i) => i.productId === item.productId);
+        if (orig) {
+          if (Number(orig.quantidade) !== item.quantidade) {
+            await fetch(`/api/pedidos/${orderId}/items/${orig.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ quantidade: item.quantidade }),
+            });
+          }
+        } else {
+          await fetch(`/api/pedidos/${orderId}/items`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ productId: item.productId, quantidade: item.quantidade }),
+          });
+        }
+      }
+
+      // 3. Salvar campos do pedido
+      const validos = editPagamentos
+        .filter((p) => Number(p.valor) > 0)
+        .map((p) => ({ forma: p.forma, valor: Number(p.valor) }));
+      const primario = validos.length > 0
+        ? validos.reduce((a, b) => (b.valor > a.valor ? b : a))
+        : { forma: "DINHEIRO", valor: 0 };
+
+      const res = await fetch(`/api/pedidos/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           total: Number(editTotal),
+          desconto: Number(editDesconto) || 0,
+          caixaNome: editCaixaNome || null,
           formaPagamento: primario.forma,
           pagamentosSplit: validos.length > 1 ? validos : null,
+          ...(editCreatedAt && { createdAt: fromDatetimeLocal(editCreatedAt) }),
+          ...(editClosedAt && { closedAt: fromDatetimeLocal(editClosedAt) }),
         }),
       });
       if (!res.ok) throw new Error();
@@ -269,6 +412,17 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       setSalvandoCaixinha(false);
     }
   }
+
+  const produtosFiltrados = useMemo(() => {
+    const q = editBusca.toLowerCase();
+    return produtos.filter((p) => {
+      const matchBusca = !q || p.nome.toLowerCase().includes(q);
+      const matchCat = !editCategoria || p.categoria === editCategoria;
+      return matchBusca && matchCat;
+    });
+  }, [produtos, editBusca, editCategoria]);
+
+  const produtoSelecionado = produtos.find((p) => p.id === editNovoProductId) ?? null;
 
   if (isLoading && !data) return <FinanceiroSkeleton />;
 
@@ -456,6 +610,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                 <tr>
                   <th className="px-5 py-3.5 text-left">Mesa</th>
                   <th className="px-5 py-3.5 text-left">Data / Hora</th>
+                  <th className="px-5 py-3.5 text-left">Caixa</th>
                   <th className="px-5 py-3.5 text-left">Pagamento</th>
                   <th className="px-5 py-3.5 text-right">CMV</th>
                   <th className="px-5 py-3.5 text-right">Total</th>
@@ -470,6 +625,9 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                       <td className="px-5 py-3.5 font-semibold text-slate-900">Mesa {p.table.numero}</td>
                       <td className="px-5 py-3.5 text-slate-500">
                         {p.closedAt ? formatDataHora(p.closedAt) : "—"}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-600 text-xs">
+                        {p.caixaNome ?? <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-5 py-3.5">
                         {p.pagamentosSplit && p.pagamentosSplit.length > 1 ? (
@@ -519,7 +677,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
               </tbody>
               <tfoot className="border-t-2 border-slate-200 bg-slate-50">
                 <tr>
-                  <td colSpan={3} className="px-5 py-3.5 text-sm font-bold text-slate-700">Total do período</td>
+                  <td colSpan={4} className="px-5 py-3.5 text-sm font-bold text-slate-700">Total do período</td>
                   <td className="px-5 py-3.5 text-right text-sm font-bold text-red-700">{moeda(cmv)}</td>
                   <td className="px-5 py-3.5 text-right text-base font-bold text-green-700">{moeda(receitaBruta)}</td>
                   <td />
@@ -551,6 +709,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                 <tr>
                   <th className="px-5 py-3.5 text-left">Mesa</th>
                   <th className="px-5 py-3.5 text-left">Abertura</th>
+                  <th className="px-5 py-3.5 text-left">Caixa</th>
                   <th className="px-5 py-3.5 text-left">Itens</th>
                   <th className="px-5 py-3.5 text-right">Total parcial</th>
                 </tr>
@@ -560,6 +719,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                   <tr key={p.id} className="bg-white hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-3.5 font-semibold text-slate-900">Mesa {p.table.numero}</td>
                     <td className="px-5 py-3.5 text-slate-500">{formatHora(p.createdAt)}</td>
+                    <td className="px-5 py-3.5 text-slate-600 text-xs">{p.caixaNome ?? "—"}</td>
                     <td className="px-5 py-3.5 text-slate-600">
                       {p.items.map((i) => `${Number(i.quantidade)}× ${i.product.nome}`).join(", ") || "—"}
                     </td>
@@ -764,52 +924,105 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
     {/* ── Modal: edição de transação ────────────────────────── */}
     {editando && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-          <h3 className="mb-1 text-lg font-bold text-slate-900">Editar Transação</h3>
-          <p className="mb-4 text-sm text-slate-500">
-            Mesa {editando.table.numero} · {editando.closedAt ? formatDataHora(editando.closedAt) : "—"}
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Total (R$)</label>
-              <input
-                type="number" min={0} step={0.01} value={editTotal}
-                onChange={(e) => setEditTotal(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-              />
+        <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl flex flex-col max-h-[92vh]">
+          {/* Cabeçalho fixo */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900">Editar Transação</h3>
+            <p className="mt-0.5 text-sm text-slate-500">Mesa {editando.table.numero}</p>
+          </div>
+
+          {/* Corpo com scroll */}
+          <div className="overflow-y-auto px-6 py-4 space-y-4">
+
+            {/* Datas */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Abertura</label>
+                <input
+                  type="datetime-local" value={editCreatedAt}
+                  onChange={(e) => setEditCreatedAt(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Fechamento</label>
+                <input
+                  type="datetime-local" value={editClosedAt}
+                  onChange={(e) => setEditClosedAt(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+              </div>
             </div>
+
+            {/* Caixa */}
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Caixa</label>
+              <select
+                value={editCaixaNome}
+                onChange={(e) => setEditCaixaNome(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                <option value="">— Sem caixa —</option>
+                {caixasDisponiveis.map((c) => (
+                  <option key={c.id} value={c.nome}>{c.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Total e Desconto */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Total (R$)</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                  <input
+                    type="number" min={0} step={0.01} value={editTotal}
+                    onChange={(e) => setEditTotal(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Desconto (R$)</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                  <input
+                    type="number" min={0} step={0.01} value={editDesconto}
+                    onChange={(e) => setEditDesconto(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Pagamentos */}
             <div className="space-y-2 rounded-lg border border-slate-200 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pagamento</p>
-              {editPagamentos.map((pag, i) => {
-                const total    = Number(editTotal) || 0;
-                const pago     = editPagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-                const restante = Math.round((total - pago) * 100) / 100;
-                return (
-                  <div key={i} className="flex items-center gap-2">
-                    <select
-                      value={pag.forma}
-                      onChange={(e) => atualizarEditPag(i, "forma", e.target.value)}
-                      className="rounded-md border border-slate-300 bg-white px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                    >
-                      {PAGAMENTOS_OPTIONS.map(({ valor, label }) => (
-                        <option key={valor} value={valor}>{label}</option>
-                      ))}
-                    </select>
-                    <div className="relative flex-1">
-                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
-                      <input
-                        type="number" min={0} step={0.01} value={pag.valor}
-                        onChange={(e) => atualizarEditPag(i, "valor", e.target.value)}
-                        placeholder="0,00"
-                        className="w-full rounded-md border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                      />
-                    </div>
-                    {editPagamentos.length > 1 && (
-                      <button onClick={() => removerEditPag(i)} className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-500">×</button>
-                    )}
+              {editPagamentos.map((pag, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <select
+                    value={pag.forma}
+                    onChange={(e) => atualizarEditPag(i, "forma", e.target.value)}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  >
+                    {PAGAMENTOS_OPTIONS.map(({ valor, label }) => (
+                      <option key={valor} value={valor}>{label}</option>
+                    ))}
+                  </select>
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                    <input
+                      type="number" min={0} step={0.01} value={pag.valor}
+                      onChange={(e) => atualizarEditPag(i, "valor", e.target.value)}
+                      placeholder="0,00"
+                      className="w-full rounded-md border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    />
                   </div>
-                );
-              })}
+                  {editPagamentos.length > 1 && (
+                    <button onClick={() => removerEditPag(i)} className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-500">×</button>
+                  )}
+                </div>
+              ))}
               {(() => {
                 const total    = Number(editTotal) || 0;
                 const pago     = editPagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
@@ -829,8 +1042,117 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                 );
               })()}
             </div>
+
+            {/* Itens editáveis */}
+            <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Itens do pedido</p>
+
+              {editItems.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-2">Nenhum item.</p>
+              )}
+
+              {editItems.map((item) => (
+                <div key={item.productId} className="flex items-center gap-2">
+                  <span className="flex-1 truncate text-xs text-slate-700">{item.nome}</span>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">{moeda(item.precoUnit)}</span>
+                  <input
+                    type="number" min={1} value={item.quantidade}
+                    onChange={(e) => alterarQtdItem(item.productId, Math.max(1, Number(e.target.value)))}
+                    className="w-14 rounded-md border border-slate-300 px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  />
+                  <span className="w-16 text-right text-xs font-semibold text-slate-700">
+                    {moeda(item.precoUnit * item.quantidade)}
+                  </span>
+                  <button
+                    onClick={() => removerEditItem(item.productId)}
+                    className="shrink-0 text-red-400 hover:text-red-600 text-sm px-1"
+                    title="Remover item"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              {/* Adicionar item — busca + categorias + lista */}
+              <div className="border-t border-slate-100 pt-3 mt-1 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Adicionar item</p>
+
+                <input
+                  type="text"
+                  placeholder="Buscar produto..."
+                  value={editBusca}
+                  onChange={(e) => { setEditBusca(e.target.value); setEditCategoria(null); }}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
+                />
+
+                {/* Categorias */}
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                  <button
+                    onClick={() => { setEditCategoria(null); setEditBusca(""); }}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+                      !editCategoria && !editBusca ? "bg-slate-800 text-white" : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  {CATEGORIAS_CARDAPIO.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => { setEditCategoria(cat); setEditBusca(""); }}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+                        editCategoria === cat ? "bg-slate-800 text-white" : "bg-white border border-slate-300 text-slate-600 hover:border-slate-500"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Lista de produtos */}
+                <div className="max-h-36 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-100">
+                  {produtosFiltrados.length === 0 ? (
+                    <p className="px-3 py-3 text-center text-xs text-slate-400">Nenhum produto encontrado.</p>
+                  ) : (
+                    produtosFiltrados.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setEditNovoProductId(p.id)}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 text-left text-xs transition-colors hover:bg-slate-50 active:bg-slate-100 ${
+                          editNovoProductId === p.id ? "bg-slate-100 font-semibold" : ""
+                        }`}
+                      >
+                        <span className="text-slate-800 truncate pr-2">{p.nome}</span>
+                        <span className="shrink-0 text-slate-500">{moeda(Number(p.preco))}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                {/* Produto selecionado + qty + botão */}
+                {produtoSelecionado && (
+                  <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2">
+                    <span className="flex-1 truncate text-xs font-medium text-slate-700">
+                      {produtoSelecionado.nome}
+                    </span>
+                    <input
+                      type="number" min={1} value={editNovaQtd}
+                      onChange={(e) => setEditNovaQtd(Math.max(1, Number(e.target.value)))}
+                      className="w-14 rounded-md border border-slate-300 px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    />
+                    <button
+                      onClick={adicionarEditItem}
+                      className="shrink-0 rounded-md bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-600"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="mt-5 flex gap-2">
+
+          {/* Rodapé fixo */}
+          <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
             <button onClick={() => setEditando(null)} className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
             <button onClick={salvarEdicao} disabled={salvando} className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
               {salvando ? "Salvando..." : "Salvar"}

@@ -57,8 +57,16 @@ model Order {
   createdAt        DateTime        @default(now())
   formaPagamento   FormaPagamento?
   pagamentosSplit  Json?
+  caixaNome        String?
   table            Table           @relation(fields: [mesaId], references: [id])
   items            OrderItem[]
+}
+
+model Caixa {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model CancelamentoLog {

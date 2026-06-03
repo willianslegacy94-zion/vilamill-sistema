@@ -6,7 +6,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { total, formaPagamento, pagamentosSplit } = await request.json();
+  const { total, desconto, caixaNome, formaPagamento, pagamentosSplit, createdAt, closedAt } = await request.json();
 
   const pedido = await prisma.order.findUnique({ where: { id } });
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
@@ -17,8 +17,12 @@ export async function PATCH(
     where: { id },
     data: {
       ...(total !== undefined && { total: Number(total) }),
+      ...(desconto !== undefined && { desconto: Number(desconto) }),
+      ...(caixaNome !== undefined && { caixaNome: caixaNome }),
       ...(formaPagamento !== undefined && { formaPagamento: formaPagamento as any }),
       pagamentosSplit: pagamentosSplit ?? null,
+      ...(createdAt !== undefined && { createdAt: new Date(createdAt) }),
+      ...(closedAt !== undefined && { closedAt: new Date(closedAt) }),
     },
   });
 
