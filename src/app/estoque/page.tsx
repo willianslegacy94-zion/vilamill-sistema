@@ -11,9 +11,16 @@ export default async function EstoquePage() {
   const isAdmin = role === "ADMIN" || role === "CAIXA";
   const isTrainee = (session?.user as any)?.isTrainee ?? false;
 
-  const insumos = await prisma.ingredient.findMany({
-    orderBy: { nome: "asc" },
-  });
+  const [insumos, produtos] = await Promise.all([
+    prisma.ingredient.findMany({ orderBy: { nome: "asc" } }),
+    prisma.product.findMany({
+      where: { track_inventory: true },
+      orderBy: [{ categoria: "asc" }, { nome: "asc" }],
+      select: { id: true, nome: true, categoria: true, estoque: true },
+    }),
+  ]);
+
+  const categorias = [...new Set(produtos.map((p) => p.categoria))].sort();
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-6 py-12">
@@ -23,7 +30,12 @@ export default async function EstoquePage() {
           ← Voltar
         </Link>
       </div>
-      <EstoqueTable insumos={JSON.parse(JSON.stringify(insumos))} isAdmin={isAdmin || isTrainee} />
+      <EstoqueTable
+        insumos={JSON.parse(JSON.stringify(insumos))}
+        produtos={JSON.parse(JSON.stringify(produtos))}
+        categorias={categorias}
+        isAdmin={isAdmin || isTrainee}
+      />
     </main>
   );
 }

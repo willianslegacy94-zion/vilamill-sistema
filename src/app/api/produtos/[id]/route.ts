@@ -6,7 +6,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { nome, categoria, preco, costPrice, track_inventory, estoque } = await request.json();
+  const body = await request.json();
+
+  if (body.delta !== undefined) {
+    const produto = await prisma.product.findUnique({ where: { id } });
+    if (!produto) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
+    const novoEstoque = Number(produto.estoque) + Number(body.delta);
+    if (novoEstoque < 0) return NextResponse.json({ error: "Quantidade insuficiente em estoque" }, { status: 400 });
+    const atualizado = await prisma.product.update({ where: { id }, data: { estoque: novoEstoque } });
+    return NextResponse.json(atualizado);
+  }
+
+  const { nome, categoria, preco, costPrice, track_inventory, estoque } = body;
 
   const produto = await prisma.product.update({
     where: { id },
