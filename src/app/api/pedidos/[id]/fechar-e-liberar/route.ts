@@ -35,9 +35,10 @@ export async function PATCH(
 
   const itensPedido = await prisma.orderItem.findMany({
     where: { orderId: id },
-    include: { product: { include: { recipeItems: true } } },
+    include: { product: { include: { recipeItems: { include: { ingredient: true } } } } },
   });
 
+  // Produtos sem ficha técnica: debita estoque do próprio produto
   const deducoesEstoque = itensPedido
     .filter((item) => item.product.track_inventory && item.product.recipeItems.length === 0)
     .map((item) =>
@@ -45,6 +46,22 @@ export async function PATCH(
         where: { id: item.product.id },
         data: { estoque: { decrement: Number(item.quantidade) } },
       })
+    );
+
+  // Produtos com ficha técnica: debita quantidadeAtual de cada insumo
+  const deducoesInsumos = itensPedido
+    .filter((item) => item.product.recipeItems.length > 0)
+    .flatMap((item) =>
+      item.product.recipeItems.map((recipeItem) =>
+        prisma.ingredient.update({
+          where: { id: recipeItem.ingredientId },
+          data: {
+            quantidadeAtual: {
+              decrement: Number(recipeItem.quantidade) * Number(item.quantidade),
+            },
+          },
+        })
+      )
     );
 
   await prisma.$transaction([
@@ -61,6 +78,7 @@ export async function PATCH(
     }),
     prisma.table.update({ where: { id: pedido.mesaId }, data: { status: "LIVRE" } }),
     ...deducoesEstoque,
+    ...deducoesInsumos,
   ]);
 
   return NextResponse.json({ ok: true });
