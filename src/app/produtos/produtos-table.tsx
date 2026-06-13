@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-type Produto = { id: string; nome: string; categoria: string; preco: string };
+type GrupoOpcional = { nome: string; obrigatorio: boolean; tipo: "radio" | "checkbox"; limite?: number; opcoes: string[] };
+type Produto = { id: string; nome: string; categoria: string; preco: string; opcionais?: GrupoOpcional[] | null };
 type Insumo = { id: string; nome: string; unidade: string };
 type ReceitaItem = { id: string; quantidade: string; ingredient: Insumo };
-type Modo = "novo" | "editar" | "receita" | null;
+type Modo = "novo" | "editar" | "receita" | "opcionais" | null;
 
 const UNIDADE: Record<string, string> = { KG: "kg", UN: "un", L: "L" };
 
@@ -22,6 +23,14 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
   const [carregando, setCarregando] = useState(false);
   const [form, setForm] = useState({ nome: "", categoria: "", preco: "" });
   const [novaCategoria, setNovaCategoria] = useState(false);
+
+  // Opcionais
+  const [gruposOpcionais, setGruposOpcionais] = useState<GrupoOpcional[]>([]);
+  const [novoGrupoNome, setNovoGrupoNome] = useState("");
+  const [novoGrupoObrig, setNovoGrupoObrig] = useState(false);
+  const [novoGrupoTipo, setNovoGrupoTipo] = useState<"radio" | "checkbox">("radio");
+  const [novoGrupoLimite, setNovoGrupoLimite] = useState("");
+  const [novoGrupoOpcoes, setNovoGrupoOpcoes] = useState("");
 
   // Ficha técnica
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -75,6 +84,51 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
     setReceitaQtd("");
     setModo("receita");
     carregarReceita(produto.id);
+  }
+
+  function abrirOpcionais(produto: Produto) {
+    setSelecionado(produto);
+    setGruposOpcionais((produto.opcionais as GrupoOpcional[]) ?? []);
+    setNovoGrupoNome("");
+    setNovoGrupoObrig(false);
+    setNovoGrupoTipo("radio");
+    setNovoGrupoLimite("");
+    setNovoGrupoOpcoes("");
+    setModo("opcionais");
+  }
+
+  function adicionarGrupo() {
+    const nome = novoGrupoNome.trim();
+    const opcoes = novoGrupoOpcoes.split(",").map((o) => o.trim()).filter(Boolean);
+    if (!nome || opcoes.length === 0) return;
+    const grupo: GrupoOpcional = {
+      nome,
+      obrigatorio: novoGrupoObrig,
+      tipo: novoGrupoTipo,
+      opcoes,
+      ...(novoGrupoTipo === "checkbox" && novoGrupoLimite ? { limite: Number(novoGrupoLimite) } : {}),
+    };
+    setGruposOpcionais((prev) => [...prev, grupo]);
+    setNovoGrupoNome("");
+    setNovoGrupoObrig(false);
+    setNovoGrupoTipo("radio");
+    setNovoGrupoLimite("");
+    setNovoGrupoOpcoes("");
+  }
+
+  function removerGrupo(idx: number) {
+    setGruposOpcionais((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function salvarOpcionais() {
+    if (!selecionado) return;
+    await chamarAPI(() =>
+      fetch(`/api/produtos/${selecionado.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opcionais: gruposOpcionais.length > 0 ? gruposOpcionais : null }),
+      })
+    );
   }
 
   function fecharModal() {
@@ -178,6 +232,9 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
                           <Button variant="ghost" className="h-8 px-2 text-xs text-blue-600 hover:bg-blue-50" onClick={() => abrirReceita(p)}>
                             Ficha Técnica
                           </Button>
+                          <Button variant="ghost" className="h-8 px-2 text-xs text-purple-600 hover:bg-purple-50" onClick={() => abrirOpcionais(p)}>
+                            Opcionais
+                          </Button>
                           <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => abrirEditar(p)}>
                             Editar
                           </Button>
@@ -263,6 +320,125 @@ export default function ProdutosTable({ produtos, categorias }: { produtos: Prod
             <div className="mt-5 flex gap-2">
               <Button variant="outline" onClick={fecharModal} className="flex-1">Cancelar</Button>
               <Button onClick={salvar} disabled={carregando || !form.nome || !form.categoria || !form.preco} className="flex-1">
+                {carregando ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Opcionais */}
+      {modo === "opcionais" && selecionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={fecharModal}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900">Opcionais do Produto</h2>
+              <button onClick={fecharModal} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
+            </div>
+            <p className="mb-4 text-sm text-slate-500">{selecionado.nome}</p>
+
+            {/* Grupos existentes */}
+            {gruposOpcionais.length === 0 ? (
+              <p className="mb-4 text-center text-sm text-slate-400 py-3">Nenhum grupo de opcionais configurado.</p>
+            ) : (
+              <ul className="mb-4 space-y-2">
+                {gruposOpcionais.map((g, idx) => (
+                  <li key={idx} className="rounded-lg border border-slate-200 px-4 py-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <span className="text-sm font-semibold text-slate-800">{g.nome}</span>
+                          <span className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${g.tipo === "checkbox" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>
+                            {g.tipo === "checkbox" ? `Múltipla${g.limite ? ` (máx ${g.limite})` : ""}` : "Única"}
+                          </span>
+                          {g.obrigatorio && <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-600">Obrigatório</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {g.opcoes.map((o) => (
+                            <span key={o} className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-600">{o}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <button onClick={() => removerGrupo(idx)} className="ml-3 shrink-0 text-xs text-red-400 hover:text-red-600">
+                        Remover
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Adicionar novo grupo */}
+            <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Novo grupo de opções</p>
+              <input
+                type="text"
+                placeholder="Nome do grupo (ex: Ponto da Carne)"
+                value={novoGrupoNome}
+                onChange={(e) => setNovoGrupoNome(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <input
+                type="text"
+                placeholder="Opções separadas por vírgula (ex: Ao Ponto, Bem Passado, Mal Passado)"
+                value={novoGrupoOpcoes}
+                onChange={(e) => setNovoGrupoOpcoes(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Tipo de seleção */}
+                <div className="flex rounded-md border border-slate-300 overflow-hidden text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setNovoGrupoTipo("radio"); setNovoGrupoLimite(""); }}
+                    className={`px-3 py-1.5 font-medium transition-colors ${novoGrupoTipo === "radio" ? "bg-slate-800 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    Única escolha
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNovoGrupoTipo("checkbox")}
+                    className={`px-3 py-1.5 font-medium transition-colors border-l border-slate-300 ${novoGrupoTipo === "checkbox" ? "bg-slate-800 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    Múltipla escolha
+                  </button>
+                </div>
+                {/* Limite (só checkbox) */}
+                {novoGrupoTipo === "checkbox" && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500">Máx:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={novoGrupoLimite}
+                      onChange={(e) => setNovoGrupoLimite(e.target.value)}
+                      placeholder="—"
+                      className="w-14 rounded-md border border-slate-300 px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    />
+                  </div>
+                )}
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={novoGrupoObrig}
+                    onChange={(e) => setNovoGrupoObrig(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-red-600"
+                  />
+                  Obrigatório
+                </label>
+                <Button
+                  onClick={adicionarGrupo}
+                  disabled={!novoGrupoNome.trim() || !novoGrupoOpcoes.trim()}
+                  className="ml-auto"
+                >
+                  + Adicionar
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" onClick={fecharModal} className="flex-1">Cancelar</Button>
+              <Button onClick={salvarOpcionais} disabled={carregando} className="flex-1">
                 {carregando ? "Salvando..." : "Salvar"}
               </Button>
             </div>

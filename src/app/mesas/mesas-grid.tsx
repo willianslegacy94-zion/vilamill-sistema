@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useMesas } from "@/hooks/useAppData";
 
-type ProdutoAPI = { id: string; nome: string; preco: string; categoria: string };
+type GrupoOpcional = { nome: string; obrigatorio: boolean; tipo: "radio" | "checkbox"; limite?: number; opcoes: string[] };
+type ProdutoAPI = { id: string; nome: string; preco: string; categoria: string; opcionais?: GrupoOpcional[] | null };
 
 type ItemPedido = {
   id: string;
@@ -13,6 +14,7 @@ type ItemPedido = {
   quantidade: string;
   precoUnit: string;
   subtotal: string;
+  observacoes?: string | null;
   product: ProdutoAPI;
 };
 
@@ -81,6 +83,7 @@ export default function MesasGrid() {
   const [quantidade, setQuantidade] = useState(1);
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
+  const [opcionaisEscolhidos, setOpcionaisEscolhidos] = useState<Record<string, string[]>>({});
   const [carregando, setCarregando] = useState(false);
   const [pagamentos, setPagamentos] = useState<PagamentoSplit[]>([{ forma: "DINHEIRO", valor: "" }]);
   const [desconto, setDesconto] = useState(0);
@@ -145,6 +148,30 @@ export default function MesasGrid() {
   }, [produtos, busca, categoriaAtiva]);
 
   const produtoSelecionado = produtos.find((p) => p.id === produtoId) ?? null;
+  const gruposOpcionais = (produtoSelecionado?.opcionais ?? []) as GrupoOpcional[];
+  const opcionaisObrigatoriosSatisfeitos = gruposOpcionais
+    .filter((g) => g.obrigatorio)
+    .every((g) => (opcionaisEscolhidos[g.nome] ?? []).length > 0);
+
+  function selecionarProduto(id: string) {
+    setProdutoId(id);
+    setOpcionaisEscolhidos({});
+  }
+
+  function toggleRadio(grupoNome: string, opcao: string) {
+    setOpcionaisEscolhidos((prev) => ({ ...prev, [grupoNome]: [opcao] }));
+  }
+
+  function toggleCheckbox(grupo: GrupoOpcional, opcao: string) {
+    setOpcionaisEscolhidos((prev) => {
+      const atual = prev[grupo.nome] ?? [];
+      const jatem = atual.includes(opcao);
+      if (jatem) return { ...prev, [grupo.nome]: atual.filter((o) => o !== opcao) };
+      const limite = grupo.limite ?? Infinity;
+      if (atual.length >= limite) return prev;
+      return { ...prev, [grupo.nome]: [...atual, opcao] };
+    });
+  }
 
   async function chamarAPI(fn: () => Promise<Response>) {
     setCarregando(true);
@@ -218,17 +245,29 @@ export default function MesasGrid() {
     );
   }
 
+  function buildObservacoes(): string {
+    return gruposOpcionais.flatMap((g) => {
+      const selecionados = opcionaisEscolhidos[g.nome] ?? [];
+      if (g.tipo === "checkbox") return selecionados.map((o) => `c/ ${o}`);
+      return selecionados;
+    }).join(", ");
+  }
+
   function adicionarItem() {
     if (!pedidoAtivo || !produtoId || !mesaEfetiva) return;
+    const obs = buildObservacoes();
     if (isTrainee) {
       const produto = produtos.find((p) => p.id === produtoId);
       if (!produto) return;
-      const existente = pedidoAtivo.items.find((i) => i.productId === produtoId);
+      const semOpcional = !obs;
+      const existente = semOpcional
+        ? pedidoAtivo.items.find((i) => i.productId === produtoId && !i.observacoes)
+        : null;
       let novosItens: ItemPedido[];
       if (existente) {
         const novaQtd = Number(existente.quantidade) + quantidade;
         novosItens = pedidoAtivo.items.map((i) =>
-          i.productId === produtoId
+          i.id === existente.id
             ? { ...i, quantidade: String(novaQtd), subtotal: (Number(i.precoUnit) * novaQtd).toFixed(2) }
             : i
         );
@@ -241,6 +280,7 @@ export default function MesasGrid() {
             quantidade: String(quantidade),
             precoUnit: produto.preco,
             subtotal: (Number(produto.preco) * quantidade).toFixed(2),
+            observacoes: obs || null,
             product: produto,
           },
         ];
@@ -248,15 +288,16 @@ export default function MesasGrid() {
       const novoTotal = novosItens.reduce((s, i) => s + Number(i.subtotal), 0).toFixed(2);
       atualizarSimulado({ ...mesaEfetiva, orders: [{ ...pedidoAtivo, items: novosItens, total: novoTotal }] });
       setQuantidade(1);
+      setOpcionaisEscolhidos({});
       return;
     }
     chamarAPI(() =>
       fetch(`/api/pedidos/${pedidoAtivo.id}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: produtoId, quantidade }),
+        body: JSON.stringify({ productId: produtoId, quantidade, observacoes: obs }),
       })
-    ).then(() => setQuantidade(1));
+    ).then(() => { setQuantidade(1); setOpcionaisEscolhidos({}); });
   }
 
   function removerItem(itemId: string) {
@@ -418,6 +459,9 @@ export default function MesasGrid() {
                         <li key={item.id} className="flex items-center justify-between py-3">
                           <div>
                             <div className="text-sm font-medium text-slate-900">{item.product.nome}</div>
+                            {item.observacoes && (
+                              <div className="text-xs text-slate-400 italic">{item.observacoes}</div>
+                            )}
                             <div className="text-xs text-slate-500">
                               {Number(item.quantidade)}× {moeda(item.precoUnit)}
                             </div>
@@ -597,7 +641,7 @@ export default function MesasGrid() {
                         produtosFiltrados.map((p) => (
                           <button
                             key={p.id}
-                            onClick={() => setProdutoId(p.id)}
+                            onClick={() => selecionarProduto(p.id)}
                             className={`w-full flex items-center justify-between px-3 py-3 text-left text-sm transition-colors active:bg-slate-100 hover:bg-slate-50 ${
                               produtoId === p.id ? "bg-slate-100 font-semibold" : ""
                             }`}
@@ -609,26 +653,135 @@ export default function MesasGrid() {
                       )}
                     </div>
 
-                    {/* Produto selecionado + quantidade */}
+                    {/* Produto selecionado + opcionais + quantidade */}
                     {produtoSelecionado && (
-                      <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2">
-                        <span className="flex-1 truncate text-xs font-medium text-slate-700">
-                          {produtoSelecionado.nome}
-                        </span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={quantidade}
-                          onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
-                          className="w-16 rounded-md border border-slate-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
-                        />
-                        <Button
-                          onClick={adicionarItem}
-                          disabled={carregando || !produtoId}
-                          className="shrink-0 px-4 py-2.5"
-                        >
-                          {carregando ? "..." : "Adicionar"}
-                        </Button>
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+
+                        {/* Cabeçalho do produto */}
+                        <div className="flex items-center justify-between px-3 py-2.5 bg-slate-50 border-b border-slate-100">
+                          <span className="text-sm font-semibold text-slate-800 truncate">{produtoSelecionado.nome}</span>
+                          <span className="ml-2 shrink-0 text-sm font-bold text-slate-700">{moeda(produtoSelecionado.preco)}</span>
+                        </div>
+
+                        {/* Grupos de opcionais */}
+                        {gruposOpcionais.length > 0 && (
+                          <div className="divide-y divide-slate-100">
+                            {gruposOpcionais.map((grupo) => {
+                              const selecionados = opcionaisEscolhidos[grupo.nome] ?? [];
+                              const atingiuLimite = grupo.tipo === "checkbox" && grupo.limite != null && selecionados.length >= grupo.limite;
+                              return (
+                                <div key={grupo.nome} className="px-3 py-3">
+                                  {/* Label do grupo */}
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                      {grupo.nome}
+                                      {grupo.obrigatorio && <span className="ml-1 text-red-500">*</span>}
+                                    </p>
+                                    {grupo.tipo === "checkbox" && grupo.limite != null && (
+                                      <span className="text-xs text-slate-400">
+                                        {selecionados.length}/{grupo.limite}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Opções — Radio */}
+                                  {(grupo.tipo === "radio" || !grupo.tipo) && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {grupo.opcoes.map((opcao) => {
+                                        const ativo = selecionados[0] === opcao;
+                                        return (
+                                          <button
+                                            key={opcao}
+                                            type="button"
+                                            onClick={() => toggleRadio(grupo.nome, opcao)}
+                                            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                                              ativo
+                                                ? "border-slate-800 bg-slate-800 text-white shadow-sm"
+                                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                                            }`}
+                                          >
+                                            <span className={`h-3 w-3 shrink-0 rounded-full border-2 flex items-center justify-center ${ativo ? "border-white" : "border-slate-400"}`}>
+                                              {ativo && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                            </span>
+                                            {opcao}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Opções — Checkbox */}
+                                  {grupo.tipo === "checkbox" && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {grupo.opcoes.map((opcao) => {
+                                        const marcado = selecionados.includes(opcao);
+                                        const bloqueado = !marcado && atingiuLimite;
+                                        return (
+                                          <button
+                                            key={opcao}
+                                            type="button"
+                                            disabled={bloqueado}
+                                            onClick={() => toggleCheckbox(grupo, opcao)}
+                                            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                                              marcado
+                                                ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                                                : bloqueado
+                                                ? "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+                                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                                            }`}
+                                          >
+                                            <span className={`h-3 w-3 shrink-0 rounded border flex items-center justify-center ${marcado ? "border-white bg-white/20" : "border-current"}`}>
+                                              {marcado && (
+                                                <svg viewBox="0 0 10 10" className="h-2 w-2 fill-white">
+                                                  <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                              )}
+                                            </span>
+                                            {opcao}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Preview das escolhas */}
+                        {gruposOpcionais.length > 0 && buildObservacoes() && (
+                          <div className="mx-3 mb-2 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500 italic">
+                            {buildObservacoes()}
+                          </div>
+                        )}
+
+                        {/* Aviso de obrigatório não preenchido */}
+                        {gruposOpcionais.length > 0 && !opcionaisObrigatoriosSatisfeitos && (
+                          <p className="px-3 pb-1 text-xs text-red-500 font-medium">
+                            ⚠ Selecione as opções obrigatórias (*)
+                          </p>
+                        )}
+
+                        {/* Linha quantidade + botão */}
+                        <div className="flex items-center gap-2 px-3 py-2.5 border-t border-slate-100">
+                          <label className="text-xs text-slate-500 shrink-0">Qtd.</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={quantidade}
+                            onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
+                            className="w-16 rounded-lg border border-slate-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                          />
+                          <button
+                            onClick={adicionarItem}
+                            disabled={carregando || !produtoId || !opcionaisObrigatoriosSatisfeitos}
+                            className="flex-1 rounded-lg bg-[#CC1111] py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#aa0e0e] disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                          >
+                            {carregando ? "Adicionando..." : "Adicionar"}
+                          </button>
+                        </div>
+
                       </div>
                     )}
                   </div>

@@ -20,6 +20,9 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/villamill"
+      DIRECT_URL: "postgresql://postgres:postgres@db:5432/villamill"
     depends_on:
       - db
 

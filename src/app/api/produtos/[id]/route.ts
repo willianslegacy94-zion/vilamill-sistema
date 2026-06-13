@@ -17,7 +17,7 @@ export async function PATCH(
     return NextResponse.json(atualizado);
   }
 
-  const { nome, categoria, preco, costPrice, track_inventory, estoque } = body;
+  const { nome, categoria, preco, costPrice, track_inventory, estoque, opcionais } = body;
 
   const produto = await prisma.product.update({
     where: { id },
@@ -28,6 +28,7 @@ export async function PATCH(
       ...(costPrice !== undefined && { costPrice: Number(costPrice) }),
       ...(track_inventory !== undefined && { track_inventory: Boolean(track_inventory) }),
       ...(estoque !== undefined && { estoque: Number(estoque) }),
+      ...(opcionais !== undefined && { opcionais }),
     },
   });
 

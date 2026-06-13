@@ -49,11 +49,16 @@ export default async function ComandaPage({
 
           <ul className="space-y-2">
             {pedido.items.map((item) => (
-              <li key={item.id} className="flex justify-between text-sm">
-                <span>
-                  <span className="font-black">{Number(item.quantidade)}x</span>{" "}
-                  {item.product.nome}
-                </span>
+              <li key={item.id} className="text-sm">
+                <div className="flex justify-between">
+                  <span>
+                    <span className="font-black">{Number(item.quantidade)}x</span>{" "}
+                    {item.product.nome}
+                  </span>
+                </div>
+                {item.observacoes && (
+                  <div className="ml-5 text-xs text-slate-500 italic">{item.observacoes}</div>
+                )}
               </li>
             ))}
           </ul>

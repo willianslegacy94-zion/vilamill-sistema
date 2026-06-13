@@ -9,7 +9,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { nome, categoria, preco, costPrice, track_inventory, estoque } = await request.json();
+  const { nome, categoria, preco, costPrice, track_inventory, estoque, opcionais } = await request.json();
 
   if (!nome || !categoria || preco === undefined) {
     return NextResponse.json({ error: "Nome, categoria e preço são obrigatórios" }, { status: 400 });
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       ...(costPrice !== undefined && { costPrice: Number(costPrice) }),
       ...(track_inventory !== undefined && { track_inventory: Boolean(track_inventory) }),
       ...(estoque !== undefined && { estoque: Number(estoque) }),
+      ...(opcionais !== undefined && { opcionais }),
     },
   });
 
