@@ -180,6 +180,29 @@ async function main() {
 
   console.log(`✓ ${usuarios.length} usuários sincronizados.`);
   console.log(`✓ ${mesas.length} mesas sincronizadas.`);
+
+  // ── Caixas (funcionárias autorizadas a abrir mesa) ─────────────────────────
+  const caixasAutorizadas = [
+    "Ana Júlia",
+    "Ednalva",
+    "Jamille",
+    "Jhenifer",
+    "Kamila",
+    "Larissa",
+    "Mill",
+  ];
+
+  await Promise.all(
+    caixasAutorizadas.map((nome) =>
+      prisma.caixa.upsert({
+        where: { nome },
+        update: { ativo: true },
+        create: { nome },
+      })
+    )
+  );
+
+  console.log(`✓ ${caixasAutorizadas.length} caixas sincronizadas.`);
 }
 
 main()

@@ -5,6 +5,7 @@ export async function GET() {
   const caixas = await prisma.caixa.findMany({
     where: { ativo: true },
     orderBy: { nome: "asc" },
+    select: { id: true, nome: true },
   });
   return NextResponse.json(caixas);
 }
