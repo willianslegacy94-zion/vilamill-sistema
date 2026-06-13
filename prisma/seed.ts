@@ -16,30 +16,47 @@ async function main() {
     )
   );
 
+  // ── Opcionais reutilizáveis ────────────────────────────────────────────────
+  const PONTO   = { nome: "Ponto da Carne",   tipo: "radio",    obrigatorio: true,  opcoes: ["Ao Ponto", "Bem Passado", "Mal Passado"] };
+  const SALADA  = { nome: "Salada",           tipo: "radio",    obrigatorio: false, opcoes: ["Tradicional", "Vinagrete"] };
+  const ACOMP   = { nome: "Acompanhamento",   tipo: "checkbox", obrigatorio: false, limite: 3, opcoes: ["Arroz", "Feijão", "Fritas", "Farofa"] };
+
+  const COM_PONTO  = [PONTO, SALADA, ACOMP];
+  const SEM_PONTO  = [SALADA, ACOMP];
+  const SO_PONTO   = [PONTO];
+
   // ── Cardápio real — Villa Mill Tamboré ─────────────────────────────────────
-  const produtos: { nome: string; preco: string; categoria: string }[] = [
+  const produtos: { nome: string; preco: string; categoria: string; opcionais?: object[] }[] = [
     // Pratos do Dia
-    { nome: "Costela Cozida com Mandioca",            preco: "35.00", categoria: "Pratos do Dia" },
-    { nome: "Strogonoff de Frango",                   preco: "30.00", categoria: "Pratos do Dia" },
-    { nome: "Lasanha",                                preco: "35.00", categoria: "Pratos do Dia" },
-    { nome: "Feijoada Completa",                      preco: "36.00", categoria: "Pratos do Dia" },
-    { nome: "Rabada Cozida com Batata",               preco: "35.00", categoria: "Pratos do Dia" },
-    { nome: "Filé de Tilápia Empanado ou Grelhado",   preco: "35.00", categoria: "Pratos do Dia" },
-    { nome: "Picadinho de Carne com Batata",          preco: "35.00", categoria: "Pratos do Dia" },
+    { nome: "Costela Cozida com Mandioca",            preco: "35.00", categoria: "Pratos do Dia",  opcionais: COM_PONTO },
+    { nome: "Strogonoff de Frango",                   preco: "30.00", categoria: "Pratos do Dia",  opcionais: SEM_PONTO },
+    { nome: "Lasanha",                                preco: "35.00", categoria: "Pratos do Dia",  opcionais: SEM_PONTO },
+    { nome: "Feijoada Completa",                      preco: "36.00", categoria: "Pratos do Dia",  opcionais: SEM_PONTO },
+    { nome: "Rabada Cozida com Batata",               preco: "35.00", categoria: "Pratos do Dia",  opcionais: COM_PONTO },
+    { nome: "Filé de Tilápia Empanado ou Grelhado",   preco: "35.00", categoria: "Pratos do Dia",  opcionais: SEM_PONTO },
+    { nome: "Picadinho de Carne com Batata",          preco: "35.00", categoria: "Pratos do Dia",  opcionais: COM_PONTO },
 
     // Todos os Dias
-    { nome: "Bife a Cavalo com Fritas",               preco: "48.00", categoria: "Todos os Dias" },
-    { nome: "Filé de Frango com Purê ou Fritas",      preco: "30.00", categoria: "Todos os Dias" },
-    { nome: "Contra Filé Acebolado com Fritas",       preco: "45.00", categoria: "Todos os Dias" },
-    { nome: "Linguiça Calabresa",                     preco: "29.00", categoria: "Todos os Dias" },
-    { nome: "Hambúrguer 90g com Ovo e Fritas",        preco: "29.00", categoria: "Todos os Dias" },
-    { nome: "Linguiça Toscana com Vinagrete",         preco: "29.00", categoria: "Todos os Dias" },
-    { nome: "Frango ao Molho com Macarrão",           preco: "30.00", categoria: "Todos os Dias" },
-    { nome: "Omelete (Tomate, Cebola e Muçarela)",    preco: "29.00", categoria: "Todos os Dias" },
-    { nome: "Almôndegas de Carne",                    preco: "32.00", categoria: "Todos os Dias" },
-    { nome: "Parmegiana de Carne com Fritas",         preco: "40.00", categoria: "Todos os Dias" },
-    { nome: "Parmegiana de Frango com Fritas",        preco: "35.00", categoria: "Todos os Dias" },
-    { nome: "Misto de Carne e Linguiça",              preco: "46.00", categoria: "Todos os Dias" },
+    { nome: "Bife a Cavalo com Fritas",               preco: "48.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Filé de Frango com Purê ou Fritas",      preco: "30.00", categoria: "Todos os Dias",  opcionais: SEM_PONTO },
+    { nome: "Contra Filé Acebolado com Fritas",       preco: "45.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Linguiça Calabresa",                     preco: "29.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Hambúrguer 90g com Ovo e Fritas",        preco: "29.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Linguiça Toscana com Vinagrete",         preco: "29.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Frango ao Molho com Macarrão",           preco: "30.00", categoria: "Todos os Dias",  opcionais: SEM_PONTO },
+    { nome: "Omelete (Tomate, Cebola e Muçarela)",    preco: "29.00", categoria: "Todos os Dias",  opcionais: SEM_PONTO },
+    { nome: "Almôndegas de Carne",                    preco: "32.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Parmegiana de Carne com Fritas",         preco: "40.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+    { nome: "Parmegiana de Frango com Fritas",        preco: "35.00", categoria: "Todos os Dias",  opcionais: SEM_PONTO },
+    { nome: "Misto de Carne e Linguiça",              preco: "46.00", categoria: "Todos os Dias",  opcionais: COM_PONTO },
+
+    // Lanches Artesanais
+    { nome: "Kwid",                                   preco: "28.00", categoria: "Lanches Artesanais", opcionais: SO_PONTO },
+    { nome: "Polo",                                   preco: "33.00", categoria: "Lanches Artesanais", opcionais: SO_PONTO },
+    { nome: "BMW 320i",                               preco: "42.00", categoria: "Lanches Artesanais", opcionais: SO_PONTO },
+    { nome: "Porsche Macan",                          preco: "40.00", categoria: "Lanches Artesanais", opcionais: SO_PONTO },
+    { nome: "Mercedes GLA 200",                       preco: "40.00", categoria: "Lanches Artesanais", opcionais: SO_PONTO },
+    { nome: "BYD Song",                               preco: "30.00", categoria: "Lanches Artesanais", opcionais: SO_PONTO },
 
     // Acompanhamentos
     { nome: "Arroz",                                  preco: "10.00", categoria: "Acompanhamentos" },
@@ -64,13 +81,6 @@ async function main() {
     { nome: "Baguete Frango",                         preco: "50.00", categoria: "Lanches na Baguete" },
     { nome: "Baguete Contra Filé",                    preco: "60.00", categoria: "Lanches na Baguete" },
 
-    // Lanches Artesanais
-    { nome: "Kwid",                                   preco: "28.00", categoria: "Lanches Artesanais" },
-    { nome: "Polo",                                   preco: "33.00", categoria: "Lanches Artesanais" },
-    { nome: "BMW 320i",                               preco: "42.00", categoria: "Lanches Artesanais" },
-    { nome: "Porsche Macan",                          preco: "40.00", categoria: "Lanches Artesanais" },
-    { nome: "Mercedes GLA 200",                       preco: "40.00", categoria: "Lanches Artesanais" },
-    { nome: "BYD Song",                               preco: "30.00", categoria: "Lanches Artesanais" },
 
     // Porções — P (pequena)
     { nome: "Batata Frita (P)",                       preco: "20.00", categoria: "Porções" },
@@ -150,12 +160,14 @@ async function main() {
 
   await Promise.all(
     produtos.map(async (produto) => {
+      const { opcionais, ...base } = produto;
+      const data = opcionais ? { ...base, opcionais } : base;
       const atualizado = await prisma.product.updateMany({
         where: { nome: produto.nome },
-        data: { preco: produto.preco, categoria: produto.categoria },
+        data,
       });
       if (atualizado.count === 0) {
-        await prisma.product.create({ data: produto });
+        await prisma.product.create({ data });
       }
     })
   );
