@@ -85,6 +85,12 @@ type ConsumoCaixinha = {
   quantidade: string | number; precoUnit: string | number; subtotal: string | number;
   registradoPor: string; registradoEm: string;
 };
+type LancamentoVale = {
+  id: string; tipo: "DINHEIRO" | "PRODUTO";
+  descricao: string; valor: string | number;
+  status: "PENDENTE" | "PAGO"; registradoPor: string; createdAt: string;
+  colaborador: { nome: string; setor: string; empresa: string };
+};
 type EntradaExtrato = {
   id: string; kind: "credito" | "baixa"; data: string;
   destino: string; descricao: string; registradoPor: string; valor: number;
@@ -432,6 +438,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const despesas: Despesa[]                  = data?.despesas            ?? [];
   const creditosCaixinha: CreditoCaixinha[]  = data?.creditosCaixinha    ?? [];
   const consumosCaixinha: ConsumoCaixinha[]  = data?.consumosCaixinha    ?? [];
+  const lancamentosVales: LancamentoVale[]   = data?.lancamentosVales    ?? [];
 
   // KPIs
   const receitaBruta  = pedidosFechados.reduce((s, p) => s + Number(p.total), 0);
@@ -479,6 +486,30 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const totalBaixasCaixinha   = consumosCaixinha.reduce((s, c) => s + Number(c.subtotal), 0);
   const saldoCaixinha         = totalCreditosCaixinha - totalBaixasCaixinha;
   const temCaixinha           = extratoCaixinha.length > 0;
+
+  // Vales — totais do período
+  const totalValesDinheiro = lancamentosVales
+    .filter((v) => v.tipo === "DINHEIRO")
+    .reduce((s, v) => s + Number(v.valor), 0);
+  const totalValesProduto = lancamentosVales
+    .filter((v) => v.tipo === "PRODUTO")
+    .reduce((s, v) => s + Number(v.valor), 0);
+  const totalValesAcumulado = totalValesDinheiro + totalValesProduto;
+  const temVales = lancamentosVales.length > 0;
+
+  // Vales — resumo por colaborador
+  type ResumoColaborador = { nome: string; setor: string; dinheiro: number; produto: number };
+  const resumoValesMap = new Map<string, ResumoColaborador>();
+  for (const v of lancamentosVales) {
+    const entry = resumoValesMap.get(v.colaborador.nome) ?? {
+      nome: v.colaborador.nome, setor: v.colaborador.setor, dinheiro: 0, produto: 0,
+    };
+    if (v.tipo === "DINHEIRO") entry.dinheiro += Number(v.valor);
+    else entry.produto += Number(v.valor);
+    resumoValesMap.set(v.colaborador.nome, entry);
+  }
+  const resumoValesColabs = Array.from(resumoValesMap.values())
+    .sort((a, b) => (b.dinheiro + b.produto) - (a.dinheiro + a.produto));
 
   const labelPeriodo =
     fromStr === toStr
@@ -591,6 +622,19 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
             </div>
           )}
         </div>
+
+        {/* Alerta de adiantamentos em dinheiro */}
+        {totalValesDinheiro > 0 && (
+          <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-5 py-3.5">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white">!</span>
+              <span className="text-sm font-medium text-amber-800">
+                Adiantamentos em dinheiro saíram fisicamente do caixa neste período
+              </span>
+            </div>
+            <span className="text-base font-bold text-amber-700 whitespace-nowrap ml-4">{moeda(totalValesDinheiro)}</span>
+          </div>
+        )}
       </div>
 
       {/* ── Transações ────────────────────────────────────────── */}
@@ -811,6 +855,91 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                   </tr>
                 ))}
               </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* ── Vales e Adiantamentos ─────────────────────────────── */}
+      {temVales && (
+        <section className="border-t border-slate-100 pt-6">
+          <SectionHeader>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-bold text-amber-700">
+                Resumo de Vales e Adiantamentos do Período
+                <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-600">
+                  {lancamentosVales.length}
+                </span>
+              </h2>
+              <span className="text-sm text-slate-400">{labelPeriodo}</span>
+            </div>
+          </SectionHeader>
+
+          {/* Sub-cards de totais */}
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="flex flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">Total Adiantamentos (Dinheiro)</span>
+              <span className="text-xl font-bold text-amber-700">{moeda(totalValesDinheiro)}</span>
+              <span className="text-xs text-amber-500">
+                {lancamentosVales.filter((v) => v.tipo === "DINHEIRO").length} lançamento{lancamentosVales.filter((v) => v.tipo === "DINHEIRO").length !== 1 ? "s" : ""} em espécie
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 rounded-xl border border-sky-200 bg-sky-50 px-5 py-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-sky-600">Total Consumo (Produtos)</span>
+              <span className="text-xl font-bold text-sky-700">{moeda(totalValesProduto)}</span>
+              <span className="text-xs text-sky-500">
+                {lancamentosVales.filter((v) => v.tipo === "PRODUTO").length} lançamento{lancamentosVales.filter((v) => v.tipo === "PRODUTO").length !== 1 ? "s" : ""} em cardápio
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 rounded-xl border border-slate-300 bg-slate-50 px-5 py-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Acumulado</span>
+              <span className="text-xl font-bold text-slate-700">{moeda(totalValesAcumulado)}</span>
+              <span className="text-xs text-slate-400">Dinheiro + Produtos no período</span>
+            </div>
+          </div>
+
+          {/* Tabela de totais por colaborador */}
+          <div className="overflow-x-auto rounded-xl border border-amber-200">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="bg-amber-50 text-xs font-semibold uppercase tracking-wide text-amber-500">
+                <tr>
+                  <th className="px-5 py-3.5 text-left">Colaborador</th>
+                  <th className="px-5 py-3.5 text-left">Setor</th>
+                  <th className="px-5 py-3.5 text-right">Total em Dinheiro (R$)</th>
+                  <th className="px-5 py-3.5 text-right">Total em Produtos (R$)</th>
+                  <th className="px-5 py-3.5 text-right">Subtotal Retido (R$)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-100">
+                {resumoValesColabs.map((colab) => {
+                  const subtotal = colab.dinheiro + colab.produto;
+                  return (
+                    <tr key={colab.nome} className="bg-white hover:bg-amber-50 transition-colors">
+                      <td className="px-5 py-3.5 font-semibold text-slate-900">{colab.nome}</td>
+                      <td className="px-5 py-3.5">
+                        <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                          {colab.setor}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-medium text-amber-700">
+                        {colab.dinheiro > 0 ? moeda(colab.dinheiro) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-medium text-sky-700">
+                        {colab.produto > 0 ? moeda(colab.produto) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-bold text-slate-800">{moeda(subtotal)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t-2 border-amber-200 bg-amber-50">
+                <tr>
+                  <td colSpan={2} className="px-5 py-3.5 text-sm font-bold text-amber-700">Total do período</td>
+                  <td className="px-5 py-3.5 text-right text-sm font-bold text-amber-700">{moeda(totalValesDinheiro)}</td>
+                  <td className="px-5 py-3.5 text-right text-sm font-bold text-sky-700">{moeda(totalValesProduto)}</td>
+                  <td className="px-5 py-3.5 text-right text-base font-bold text-slate-800">{moeda(totalValesAcumulado)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </section>

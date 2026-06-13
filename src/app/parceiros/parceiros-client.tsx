@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Eye, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Colaborador = {
@@ -32,6 +32,14 @@ function mesAtual() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function formatDataHora(iso: string) {
+  return new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
 export default function ParceirosClient() {
   const { data: session } = useSession();
   const emailOperador = session?.user?.email ?? "sistema";
@@ -58,9 +66,12 @@ export default function ParceirosClient() {
   const [colaboradorExtrato, setColaboradorExtrato] = useState<Colaborador | null>(null);
   const [lancamentos, setLancamentos] = useState<LancamentoVale[]>([]);
   const [carregandoExtrato, setCarregandoExtrato] = useState(false);
-  const [liquidando, setLiquidando] = useState(false);
 
-  // Exclusão
+  // Modal confirmação de baixa
+  const [confirmBaixa, setConfirmBaixa] = useState<{ colaboradorId: string; nome: string; saldo: number } | null>(null);
+  const [liquidandoBaixa, setLiquidandoBaixa] = useState(false);
+
+  // Exclusão de colaborador
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
@@ -145,19 +156,38 @@ export default function ParceirosClient() {
     setLancamentos([]);
   }
 
-  async function liquidarSaldo() {
-    if (!colaboradorExtrato) return;
-    setLiquidando(true);
+  function pedirBaixa(col: Colaborador) {
+    if (col.saldo <= 0) return;
+    setConfirmBaixa({ colaboradorId: col.id, nome: col.nome, saldo: col.saldo });
+  }
+
+  async function executarBaixa() {
+    if (!confirmBaixa) return;
+    setLiquidandoBaixa(true);
     try {
-      await fetch("/api/vales/liquidar", {
+      const res = await fetch("/api/vales/liquidar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ colaboradorId: colaboradorExtrato.id }),
+        body: JSON.stringify({ colaboradorId: confirmBaixa.colaboradorId }),
       });
-      fecharExtrato();
-      carregar();
+      if (!res.ok) throw new Error("Falha ao liquidar.");
+
+      // Atualização otimista imediata
+      setColaboradores((prev) =>
+        prev.map((c) => c.id === confirmBaixa.colaboradorId ? { ...c, saldo: 0 } : c)
+      );
+
+      // Se o extrato desse colaborador estiver aberto, atualiza também
+      if (colaboradorExtrato?.id === confirmBaixa.colaboradorId) {
+        setColaboradorExtrato((prev) => prev ? { ...prev, saldo: 0 } : null);
+        setLancamentos((prev) => prev.map((l) => ({ ...l, status: "PAGO" as const })));
+      }
+
+      setConfirmBaixa(null);
+    } catch {
+      alert("Erro ao liquidar saldo. Tente novamente.");
     } finally {
-      setLiquidando(false);
+      setLiquidandoBaixa(false);
     }
   }
 
@@ -174,6 +204,7 @@ export default function ParceirosClient() {
 
   const totalColaboradores = colaboradores.length;
   const totalSaldo = colaboradores.reduce((s, c) => s + c.saldo, 0);
+  const lancamentosPendentes = lancamentos.filter((l) => l.status === "PENDENTE");
 
   return (
     <>
@@ -215,16 +246,12 @@ export default function ParceirosClient() {
                 <th className="px-4 py-3 text-left">Colaborador</th>
                 <th className="px-4 py-3 text-left">Setor Operacional</th>
                 <th className="px-4 py-3 text-right">Saldo Devedor</th>
-                <th className="px-4 py-3 text-right"></th>
+                <th className="px-4 py-3 text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {colaboradores.map((c) => (
-                <tr
-                  key={c.id}
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
-                  onClick={() => abrirExtrato(c)}
-                >
+                <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-slate-900">{c.nome}</td>
                   <td className="px-4 py-3">
                     <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
@@ -234,33 +261,57 @@ export default function ParceirosClient() {
                   <td className={`px-4 py-3 text-right font-semibold ${c.saldo > 0 ? "text-red-600" : "text-slate-400"}`}>
                     {moeda(c.saldo)}
                   </td>
-                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    {confirmandoId === c.id ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="text-xs text-slate-500">Excluir?</span>
-                        <button
-                          onClick={() => excluirColaborador(c.id)}
-                          disabled={excluindoId === c.id}
-                          className="rounded px-2 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                        >
-                          {excluindoId === c.id ? "..." : "Sim"}
-                        </button>
-                        <button
-                          onClick={() => setConfirmandoId(null)}
-                          className="rounded px-2 py-1 text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-50"
-                        >
-                          Não
-                        </button>
-                      </div>
-                    ) : (
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      {/* Ver Extrato */}
                       <button
-                        onClick={() => setConfirmandoId(c.id)}
-                        className="rounded p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Excluir colaborador"
+                        onClick={() => abrirExtrato(c)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                        title="Ver extrato de lançamentos"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Eye className="h-3.5 w-3.5" />
+                        Extrato
                       </button>
-                    )}
+
+                      {/* Dar Baixa */}
+                      <button
+                        onClick={() => pedirBaixa(c)}
+                        disabled={c.saldo <= 0}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                        title={c.saldo <= 0 ? "Sem saldo pendente" : "Dar baixa no saldo devedor"}
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Dar Baixa
+                      </button>
+
+                      {/* Excluir */}
+                      {confirmandoId === c.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500">Excluir?</span>
+                          <button
+                            onClick={() => excluirColaborador(c.id)}
+                            disabled={excluindoId === c.id}
+                            className="rounded px-2 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {excluindoId === c.id ? "..." : "Sim"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmandoId(null)}
+                            className="rounded px-2 py-1 text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-50"
+                          >
+                            Não
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmandoId(c.id)}
+                          className="rounded p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Excluir colaborador"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -321,7 +372,6 @@ export default function ParceirosClient() {
               <h3 className="mb-4 text-lg font-bold text-slate-900">Lançar Vale / Consumo</h3>
               <div className="space-y-4">
 
-                {/* Colaborador */}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-600">Colaborador</label>
                   <select
@@ -336,7 +386,6 @@ export default function ParceirosClient() {
                   </select>
                 </div>
 
-                {/* Tipo */}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-600">Tipo</label>
                   <div className="flex gap-2">
@@ -363,7 +412,6 @@ export default function ParceirosClient() {
                   </div>
                 </div>
 
-                {/* Descrição */}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-600">Descrição</label>
                   <input
@@ -374,7 +422,6 @@ export default function ParceirosClient() {
                   />
                 </div>
 
-                {/* Valor */}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-600">Valor (R$)</label>
                   <div className="relative">
@@ -427,54 +474,80 @@ export default function ParceirosClient() {
       {/* Modal — Extrato do Colaborador */}
       {colaboradorExtrato && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{colaboradorExtrato.nome}</h3>
-                <p className="text-xs text-slate-500">{colaboradorExtrato.setor} · Mês atual</p>
+                <p className="text-xs text-slate-500">{colaboradorExtrato.setor} · Lançamentos pendentes do mês atual</p>
               </div>
-              <button onClick={fecharExtrato} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
+              <button onClick={fecharExtrato} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 text-xl leading-none">
+                ×
+              </button>
             </div>
 
-            {/* Lista de lançamentos */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            {/* Tabela de lançamentos */}
+            <div className="flex-1 overflow-y-auto">
               {carregandoExtrato ? (
-                <p className="py-6 text-center text-sm text-slate-400">Carregando extrato...</p>
-              ) : lancamentos.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">Nenhum lançamento no mês atual.</p>
+                <p className="py-10 text-center text-sm text-slate-400">Carregando extrato...</p>
+              ) : lancamentosPendentes.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-400">Nenhum lançamento pendente no mês atual.</p>
               ) : (
-                <div className="divide-y divide-slate-100">
-                  {lancamentos.map((l) => (
-                    <div key={l.id} className="flex items-center justify-between py-3">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 text-base">{l.tipo === "DINHEIRO" ? "💵" : "🍽️"}</span>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{l.descricao}</p>
-                          <p className="text-xs text-slate-400">
-                            {new Date(l.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-semibold ${l.status === "PENDENTE" ? "text-red-600" : "text-slate-400"}`}>
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-5 py-3 text-left">Data / Hora</th>
+                      <th className="px-5 py-3 text-left">Tipo</th>
+                      <th className="px-5 py-3 text-left">Descrição</th>
+                      <th className="px-5 py-3 text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {lancamentosPendentes.map((l) => (
+                      <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
+                          {formatDataHora(l.createdAt)}
+                        </td>
+                        <td className="px-5 py-3">
+                          {l.tipo === "DINHEIRO" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                              💵 Dinheiro
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
+                              🍽️ Produto
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-slate-700">{l.descricao}</td>
+                        <td className="px-5 py-3 text-right font-semibold text-red-600">
                           {moeda(l.valor)}
-                        </p>
-                        <span className={`text-xs font-medium ${l.status === "PENDENTE" ? "text-amber-600" : "text-emerald-600"}`}>
-                          {l.status === "PENDENTE" ? "Pendente" : "Pago"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                    <tr>
+                      <td colSpan={3} className="px-5 py-3 text-sm font-bold text-slate-700">
+                        Total pendente
+                      </td>
+                      <td className="px-5 py-3 text-right text-base font-bold text-red-600">
+                        {moeda(lancamentosPendentes.reduce((s, l) => s + Number(l.valor), 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               )}
             </div>
 
-            {/* Footer com total e botão liquidar */}
+            {/* Footer */}
             <div className="border-t border-slate-100 px-6 py-4">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm font-semibold text-slate-600">Saldo devedor</span>
-                <span className="text-xl font-bold text-red-600">{moeda(colaboradorExtrato.saldo)}</span>
+                <span className={`text-xl font-bold ${colaboradorExtrato.saldo > 0 ? "text-red-600" : "text-slate-400"}`}>
+                  {moeda(colaboradorExtrato.saldo)}
+                </span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -484,13 +557,62 @@ export default function ParceirosClient() {
                   Fechar
                 </button>
                 <Button
-                  onClick={liquidarSaldo}
-                  disabled={liquidando || colaboradorExtrato.saldo === 0}
+                  onClick={() => pedirBaixa(colaboradorExtrato)}
+                  disabled={colaboradorExtrato.saldo <= 0}
                   className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  {liquidando ? "Liquidando..." : "✓ Liquidar Saldo"}
+                  <CheckCircle className="mr-1.5 h-4 w-4" />
+                  Liquidar Saldo Total
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal — Confirmação de Baixa */}
+      {confirmBaixa && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Confirmar Baixa</h3>
+            </div>
+
+            <p className="mb-1.5 text-sm text-slate-700">
+              Tem certeza que deseja dar baixa no saldo de{" "}
+              <span className="font-bold text-red-600">{moeda(confirmBaixa.saldo)}</span>{" "}
+              do colaborador{" "}
+              <span className="font-semibold text-slate-900">{confirmBaixa.nome}</span>?
+            </p>
+            <p className="mb-6 text-xs text-slate-500">
+              Esta ação irá zerar os débitos pendentes deste período.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmBaixa(null)}
+                disabled={liquidandoBaixa}
+                className="flex-1 rounded-lg border border-slate-300 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <Button
+                onClick={executarBaixa}
+                disabled={liquidandoBaixa}
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {liquidandoBaixa ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Processando...
+                  </span>
+                ) : (
+                  "Confirmar Baixa"
+                )}
+              </Button>
             </div>
           </div>
         </div>

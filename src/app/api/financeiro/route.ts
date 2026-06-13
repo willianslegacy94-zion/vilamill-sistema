@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const inicioPeriodo = intervaloSP(fromStr).inicio;
   const fimPeriodo = intervaloSP(toStr).fim;
 
-  const [pedidosFechados, pedidosAbertos, cancelamentos, despesas, creditosCaixinha, consumosCaixinha] =
+  const [pedidosFechados, pedidosAbertos, cancelamentos, despesas, creditosCaixinha, consumosCaixinha, lancamentosVales] =
     await Promise.all([
       prisma.order.findMany({
         where: { paymentStatus: "PAGO", closedAt: { gte: inicioPeriodo, lte: fimPeriodo } },
@@ -50,6 +50,11 @@ export async function GET(request: NextRequest) {
         include: { funcionario: true, product: true },
         orderBy: { registradoEm: "desc" },
       }),
+      prisma.lancamentoVale.findMany({
+        where: { createdAt: { gte: inicioPeriodo, lte: fimPeriodo } },
+        include: { colaborador: true },
+        orderBy: { createdAt: "desc" },
+      }),
     ]);
 
   return NextResponse.json(
@@ -61,6 +66,7 @@ export async function GET(request: NextRequest) {
         despesas,
         creditosCaixinha,
         consumosCaixinha,
+        lancamentosVales,
         fromStr,
         toStr,
       })
