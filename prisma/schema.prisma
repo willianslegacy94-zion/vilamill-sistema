@@ -145,14 +145,39 @@ enum TipoCreditoFuncionario {
   COLETIVO
 }
 
+enum TipoLancamento {
+  DINHEIRO
+  PRODUTO
+}
+
+enum StatusLancamento {
+  PENDENTE
+  PAGO
+}
+
 model FuncionarioExterno {
-  id        String               @id @default(cuid())
-  nome      String
-  empresa   String
-  ativo     Boolean              @default(true)
-  createdAt DateTime             @default(now())
-  creditos  CreditoFuncionario[]
-  consumos  ConsumoFuncionario[]
+  id          String               @id @default(cuid())
+  nome        String
+  empresa     String
+  setor       String               @default("Lava-Rápido")
+  ativo       Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  creditos    CreditoFuncionario[]
+  consumos    ConsumoFuncionario[]
+  lancamentos LancamentoVale[]
+}
+
+model LancamentoVale {
+  id            String           @id @default(cuid())
+  colaboradorId String
+  colaborador   FuncionarioExterno @relation(fields: [colaboradorId], references: [id])
+  tipo          TipoLancamento
+  descricao     String
+  valor         Decimal          @db.Decimal(10, 2)
+  status        StatusLancamento @default(PENDENTE)
+  registradoPor String
+  createdAt     DateTime         @default(now())
+  liquidadoEm   DateTime?
 }
 
 model CreditoFuncionario {
