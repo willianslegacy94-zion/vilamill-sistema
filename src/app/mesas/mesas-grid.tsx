@@ -41,6 +41,7 @@ const STATUS = {
 } as const;
 
 const CATEGORIAS = [
+  "Lavagem",
   "Pratos do Dia",
   "Todos os Dias",
   "Acompanhamentos",
