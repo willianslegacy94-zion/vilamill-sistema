@@ -87,9 +87,10 @@ model OrderItem {
   custoUnit   Decimal  @db.Decimal(10, 2) @default(0)
   subtotal    Decimal  @db.Decimal(10, 2)
   observacoes String?
-  status      String   @default("PENDENTE")
-  createdAt   DateTime @default(now())
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      String    @default("PENDENTE")
+  createdAt   DateTime  @default(now())
+  prontoEm    DateTime?
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product  @relation(fields: [productId], references: [id])
 }
 

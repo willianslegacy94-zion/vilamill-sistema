@@ -9,7 +9,7 @@ export async function PATCH(
 
   const item = await prisma.orderItem.update({
     where: { id: itemId },
-    data: { status: "PRONTO" },
+    data: { status: "PRONTO", prontoEm: new Date() },
   });
 
   return NextResponse.json({ ok: true, id: item.id, status: item.status });
