@@ -71,6 +71,17 @@ function moeda(v: string | number) {
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// Extrai as duas opções de um nome como "Filé de Tilápia Empanado ou Grelhado"
+// → ["Empanado", "Grelhado"]. Retorna null se não houver " ou ".
+function extrairOpcoesOu(nome: string): [string, string] | null {
+  const idx = nome.indexOf(" ou ");
+  if (idx === -1) return null;
+  const esquerda = nome.slice(0, idx).trim();
+  const direita  = nome.slice(idx + 4).trim();
+  const opcaoA   = esquerda.split(" ").pop()!;
+  return [opcaoA, direita];
+}
+
 export default function MesasGrid() {
   const { data: session } = useSession();
   const nomeUsuario = session?.user?.name ?? "Sistema";
@@ -185,9 +196,11 @@ export default function MesasGrid() {
     .every((g) => (opcionaisEscolhidos[g.nome] ?? []).length > 0);
 
   function selecionarProduto(id: string) {
+    const prod = produtos.find((p) => p.id === id);
+    const opcoes = prod ? extrairOpcoesOu(prod.nome) : null;
     setProdutoId(id);
     setOpcionaisEscolhidos({});
-    setPreparo("Empanado");
+    setPreparo(opcoes ? opcoes[0] : "");
     setObservacaoLivre("");
   }
 
@@ -280,12 +293,11 @@ export default function MesasGrid() {
 
   function buildObservacoes(): string {
     const parts: string[] = [];
+    const opcoesOu = produtoSelecionado ? extrairOpcoesOu(produtoSelecionado.nome) : null;
     const temGrupoPreparo = gruposOpcionais.some((g) =>
       g.nome.toLowerCase().includes("preparo")
     );
-    const mostrarPreparo =
-      produtoSelecionado?.categoria === "Pratos do Dia" && !temGrupoPreparo;
-    if (mostrarPreparo) parts.push(preparo);
+    if (opcoesOu && !temGrupoPreparo && preparo) parts.push(preparo);
     gruposOpcionais.forEach((g) => {
       const selecionados = opcionaisEscolhidos[g.nome] ?? [];
       if (g.tipo === "checkbox") selecionados.forEach((o) => parts.push(`c/ ${o}`));
@@ -846,37 +858,45 @@ export default function MesasGrid() {
                           </p>
                         )}
 
-                        {/* Seletor de preparo — apenas para Pratos do Dia sem grupo Preparo no DB */}
-                        {produtoSelecionado?.categoria === "Pratos do Dia" &&
-                          !gruposOpcionais.some((g) => g.nome.toLowerCase().includes("preparo")) && (
-                          <div className="border-t border-slate-100 px-3 py-3">
-                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                              Preparo <span className="text-red-500">*</span>
-                            </p>
-                            <div className="flex gap-2">
-                              {["Empanado", "Grelhado"].map((opcao) => {
-                                const ativo = preparo === opcao;
-                                return (
-                                  <button
-                                    key={opcao}
-                                    type="button"
-                                    onClick={() => setPreparo(opcao)}
-                                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
-                                      ativo
-                                        ? "border-slate-800 bg-slate-800 text-white shadow-sm"
-                                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
-                                    }`}
-                                  >
-                                    <span className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 ${ativo ? "border-white" : "border-slate-400"}`}>
-                                      {ativo && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                                    </span>
-                                    {opcao}
-                                  </button>
-                                );
-                              })}
+                        {/* Seletor de preparo — detectado dinamicamente pelo " ou " no nome */}
+                        {(() => {
+                          const opcoesOu = produtoSelecionado
+                            ? extrairOpcoesOu(produtoSelecionado.nome)
+                            : null;
+                          const temGrupoPreparo = gruposOpcionais.some((g) =>
+                            g.nome.toLowerCase().includes("preparo")
+                          );
+                          if (!opcoesOu || temGrupoPreparo) return null;
+                          return (
+                            <div className="border-t border-slate-100 px-3 py-3">
+                              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Preparo <span className="text-red-500">*</span>
+                              </p>
+                              <div className="flex gap-2">
+                                {opcoesOu.map((opcao) => {
+                                  const ativo = preparo === opcao;
+                                  return (
+                                    <button
+                                      key={opcao}
+                                      type="button"
+                                      onClick={() => setPreparo(opcao)}
+                                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                                        ativo
+                                          ? "border-slate-800 bg-slate-800 text-white shadow-sm"
+                                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                                      }`}
+                                    >
+                                      <span className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 ${ativo ? "border-white" : "border-slate-400"}`}>
+                                        {ativo && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                      </span>
+                                      {opcao}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Campo de observações livres */}
                         <div className="border-t border-slate-100 px-3 py-3">
