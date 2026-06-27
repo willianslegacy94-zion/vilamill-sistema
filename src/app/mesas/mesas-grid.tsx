@@ -99,6 +99,8 @@ export default function MesasGrid() {
   const [caixaNome, setCaixaNome] = useState("");
   const [caixasDisponiveis, setCaixasDisponiveis] = useState<{ id: string; nome: string }[]>([]);
   const [dadosCupom, setDadosCupom] = useState<DadosCupom | null>(null);
+  const [showCupomConfirmModal, setShowCupomConfirmModal] = useState(false);
+  const [cupomJaOfertado, setCupomJaOfertado] = useState(false);
 
   useEffect(() => {
     fetch("/api/caixas").then((r) => r.json()).then(setCaixasDisponiveis).catch(() => {});
@@ -151,6 +153,8 @@ export default function MesasGrid() {
     setShowDescontoModal(false);
     setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
     setCaixaNome("");
+    setShowCupomConfirmModal(false);
+    setCupomJaOfertado(false);
   }, [mesaIdSelecionada]);
 
   useEffect(() => {
@@ -374,6 +378,14 @@ export default function MesasGrid() {
       alert("Ocorreu um erro ao fechar a conta. Tente novamente.");
     } finally {
       setCarregando(false);
+    }
+  }
+
+  function handleFecharConta() {
+    if (!cupomJaOfertado) {
+      setShowCupomConfirmModal(true);
+    } else {
+      fecharConta();
     }
   }
 
@@ -898,7 +910,7 @@ export default function MesasGrid() {
 
                   {/* Botões de ação principais — py-4 para polegar */}
                   <Button
-                    onClick={fecharConta}
+                    onClick={handleFecharConta}
                     disabled={carregando || !podeFechar}
                     className="w-full py-4 text-base bg-emerald-600 text-white hover:bg-emerald-700"
                   >
@@ -975,6 +987,52 @@ export default function MesasGrid() {
           </div>
         </div>
       )}
+      {/* Modal de confirmação de cupom */}
+      {showCupomConfirmModal && (
+        <div className="fixed inset-0 z-[65] flex items-end sm:items-center sm:justify-center bg-black/50 sm:px-4">
+          <div className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
+            <div className="flex justify-center pt-3 sm:hidden">
+              <div className="h-1 w-10 rounded-full bg-slate-300" />
+            </div>
+            <div className="p-6">
+              <div className="mb-5 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                  <svg className="h-7 w-7 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Cupom fiscal?</h3>
+                <p className="mt-1 text-sm text-slate-500">O cliente gostaria de um cupom do pedido?</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setShowCupomConfirmModal(false);
+                    setCupomJaOfertado(true);
+                  }}
+                  className="w-full rounded-xl border border-slate-300 py-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100 flex items-center justify-center gap-2"
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Sim, imprimir cupom
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCupomConfirmModal(false);
+                    setCupomJaOfertado(true);
+                    fecharConta();
+                  }}
+                  className="w-full rounded-xl bg-emerald-600 py-4 text-sm font-bold text-white hover:bg-emerald-700 active:bg-emerald-800"
+                >
+                  Não, fechar conta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Área de impressão — oculta na tela, sempre disponível quando há pedido ativo ou pós-fechamento */}
       {(cupomAtual ?? dadosCupom) && (
         <CupomImpressao dados={(cupomAtual ?? dadosCupom)!} />
