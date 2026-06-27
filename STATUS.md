@@ -1,6 +1,6 @@
 # Villa Mill Tamboré — Status do Projeto
 
-**Última atualização:** 2026-05-29 (sessão 3)
+**Última atualização:** 2026-06-27
 
 ---
 
@@ -10,15 +10,29 @@
 - Visualização das mesas com status: **Livre** (verde), **Ocupada** (vermelho), **Conta** (vermelho escuro)
 - Abertura de mesa e criação de pedido
 - Adição e remoção de itens em tempo real com busca e filtro por categoria
+- **Opcionais por produto** — grupos radio (escolha única) e checkbox (múltipla, com limite) configurados como JSON no cadastro de cada produto
+- **Seletor de preparo dinâmico** — detecta " ou " no nome do produto (ex: "Filé de Tilápia Empanado ou Grelhado") e gera botões de seleção automaticamente sem hardcode de categoria
+- **Campo "Observações / Retiradas"** — texto livre enviado à comanda e exibido no KDS (ex: "Sem cebola, molho à parte")
 - **Pagamento simples** (Dinheiro, Crédito, Débito, Pix, Voucher VR/VA)
 - **Pagamento dividido (split)** — múltiplas formas de pagamento em um mesmo fechamento
 - Campo de desconto (R$) com total atualizado em tempo real
 - **Desconto com autorização de admin** — botão "Aplicar" ao lado do campo; CAIXA precisa informar a senha do admin para confirmar; ADMIN aplica diretamente
 - Fechamento de conta com baixa automática de estoque (via Ficha Técnica)
+- **Cupom térmico 80mm** — gerado no fechamento; pop de confirmação pergunta se cliente quer cupom antes de fechar; botão "Imprimir Cupom" disponível mesmo sem itens
 - **Cancelamento de pedido** com motivo obrigatório e log no banco
 - **Modo Treinamento** — simula abertura, itens e fechamento sem persistir no banco
 - Liberação de emergência de mesa travada
 - **SWR polling em tempo real** — atualização automática a cada 3 segundos sem flicker
+
+### Módulo: KDS — Cozinha (Kitchen Display System)
+- Tela dedicada `/cozinha` com tema escuro para ambiente de cozinha
+- **Abas Pendentes / Concluídos** — separa itens em preparo dos já finalizados no dia
+- **Reset diário automático** — aba Concluídos zera automaticamente à meia-noite (SP)
+- **Urgência visual por tempo** — card neutro (<8min), âmbar (+8min), vermelho (+15min)
+- Exibe número da mesa, categoria do produto, tempo decorrido e observações em destaque âmbar
+- Botão **✓ PRONTO** marca o item como concluído (`PATCH /api/cozinha/pedidos/:itemId`)
+- Polling SWR a cada 2 segundos para atualização em tempo real
+- Role `COZINHA` — acesso exclusivo à tela `/cozinha`, sem acesso ao PDV
 
 ### Módulo: Estoque
 - CRUD completo de insumos (nome, unidade, quantidade, nível mínimo)
@@ -83,10 +97,10 @@
 
 ## Pendente / Próximos Passos
 
-- Impressão de comanda para cozinha/bar (`/comanda/[id]` — página térmica 80mm)
 - Relatório mensal e exportação de dados
 - Controle de usuários pelo painel Admin (criar/desativar)
 - Backup automatizado do banco
+- Ativação completa da baixa de estoque por ficha técnica (RecipeItem) no fechamento
 
 ---
 
@@ -131,3 +145,8 @@ NEXTAUTH_URL=        # URL da aplicação
 | `20260527110042_parceria_lava_rapido` | FuncionarioExterno, CreditoFuncionario, ConsumoFuncionario, TipoCreditoFuncionario |
 | `20260527144124_credito_pool_coletivo` | CreditoFuncionario.funcionarioId nullable + campo empresa (pool coletivo) |
 | `20260529040638_add_voucher_pagamento` | Valor VOUCHER no enum FormaPagamento |
+| `20260603025637_add_caixa_model` | Model Caixa (funcionárias autorizadas a abrir mesa) |
+| `20260613000000_add_lancamento_vale` | Model LancamentoVale; campo setor em FuncionarioExterno; enums TipoLancamento e StatusLancamento |
+| `20260613161904_add_opcionais_observacoes` | Campo opcionais (JSONB) em Product; campo observacoes (TEXT) em OrderItem; remove unique (orderId, productId) |
+| `20260627031855_add_cozinha_kds` | Role COZINHA em UserRole; campos status e createdAt em OrderItem |
+| `20260627042546_add_pronto_em_order_item` | Campo prontoEm (TIMESTAMP) em OrderItem |

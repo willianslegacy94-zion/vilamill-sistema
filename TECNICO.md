@@ -1,7 +1,7 @@
 # Villa Mill Tamboré — Documentação Técnica
 
-**Versão:** 1.3  
-**Data:** Maio 2026  
+**Versão:** 1.6  
+**Data:** Junho 2026  
 **Desenvolvedor:** Willians de Oliveira Santana  
 **Suporte:** willians.legacy94@gmail.com
 
@@ -111,6 +111,7 @@ id, numero (único), status (LIVRE | OCUPADA | CONTA)
 **Product** — Cardápio
 ```
 id, nome, preco, costPrice, categoria, track_inventory, estoque
+opcionais (JSONB) — grupos de opcionais: [{ nome, tipo, obrigatorio, limite?, opcoes[] }]
 → tem muitos OrderItem, RecipeItem
 ```
 
@@ -141,7 +142,9 @@ closedAt, createdAt, formaPagamento (DINHEIRO | CARTAO | CREDITO | DEBITO | PIX)
 **OrderItem** — Item da comanda
 ```
 id, orderId, productId, quantidade, precoUnit, custoUnit, subtotal
-Unique: (orderId, productId)
+observacoes (TEXT) — preparo + texto livre (ex: "Grelhado | Obs: Sem cebola")
+status (TEXT) — "PENDENTE" | "PRONTO" (KDS)
+createdAt, prontoEm (TIMESTAMP)
 ```
 
 **CancelamentoLog** — Log de mesas canceladas
@@ -151,13 +154,31 @@ id, mesaNumero, motivoCancelamento, canceladoPor, canceladoEm
 
 **User** — Usuários do sistema
 ```
-id, nome, email (único), senhaHash, role (ADMIN | CAIXA)
+id, nome, email (único), senhaHash, role (ADMIN | CAIXA | COZINHA)
+```
+
+**Caixa** — Funcionárias autorizadas a abrir mesa
+```
+id, nome (único), ativo, createdAt
+```
+
+**LancamentoVale** — Vales de funcionários externos
+```
+id, colaboradorId, tipo (DINHEIRO | PRODUTO), descricao, valor
+status (PENDENTE | PAGO), registradoPor, createdAt, liquidadoEm
+→ pertence a FuncionarioExterno
 ```
 
 ### Diagrama de Relacionamentos
 
 ```
 Table ──< Order ──< OrderItem >── Product ──< RecipeItem >── Ingredient
+                                                │
+                                          opcionais (JSONB)
+
+FuncionarioExterno ──< CreditoFuncionario
+                   ──< ConsumoFuncionario
+                   ──< LancamentoVale
 ```
 
 ---
@@ -168,16 +189,39 @@ Table ──< Order ──< OrderItem >── Product ──< RecipeItem >──
 | Método | Rota | Descrição |
 |---|---|---|
 | POST | `/api/pedidos` | Abre pedido para uma mesa |
+| PATCH | `/api/pedidos/:id` | Edita total/pagamento de pedido fechado |
 | DELETE | `/api/pedidos/:id` | Cancela pedido (registra log) |
-| POST | `/api/pedidos/:id/items` | Adiciona item (grava custoUnit) |
+| POST | `/api/pedidos/:id/items` | Adiciona item (grava custoUnit + observacoes) |
 | DELETE | `/api/pedidos/:id/items/:itemId` | Remove item |
 | PATCH | `/api/pedidos/:id/fechar` | Fecha conta (status→CONTA, mesa→LIVRE) |
-| PATCH | `/api/pedidos/:id/fechar-e-liberar` | Fecha e paga (status→PAGO, mesa→LIVRE) |
+| PATCH | `/api/pedidos/:id/fechar-e-liberar` | Fecha e paga (status→PAGO, mesa→LIVRE, split payment) |
 
 ### Mesas
 | Método | Rota | Descrição |
 |---|---|---|
+| GET | `/api/mesas` | Lista mesas com pedidos e itens ativos |
 | PATCH | `/api/mesas/:id/liberar` | Libera mesa de emergência |
+
+### KDS — Cozinha
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/cozinha/pedidos` | Retorna `{ pendentes, concluidos }` — itens do dia filtrados por status |
+| PATCH | `/api/cozinha/pedidos/:itemId` | Marca item como PRONTO (seta prontoEm) |
+
+### Caixas
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/caixas` | Lista funcionárias ativas autorizadas a abrir mesa |
+| POST | `/api/caixas` | Cria nova caixa |
+| PATCH | `/api/caixas/:id` | Edita nome ou status ativo |
+| DELETE | `/api/caixas/:id` | Remove caixa |
+
+### Vales (Funcionários Externos)
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/vales` | Lista lançamentos de vale (filtro por colaboradorId) |
+| POST | `/api/vales` | Cria lançamento (DINHEIRO ou PRODUTO) |
+| POST | `/api/vales/liquidar` | Marca vale como PAGO |
 
 ### Produtos
 | Método | Rota | Descrição |
@@ -220,6 +264,7 @@ NextAuth v5 com **Credentials Provider** + **JWT**. A senha é armazenada como h
 | `ADMIN` | Tudo (incluindo Despesas e Financeiro) | Sim |
 | `CAIXA` | Mesas, Cardápio, Estoque (entrada/saída) | Sim (exceto criar/editar/excluir insumos) |
 | `CAIXA` + `isTrainee` | Todos os módulos (igual ao ADMIN na navegação) | Não — middleware retorna `{ ok: true }` sem gravar |
+| `COZINHA` | Apenas `/cozinha` (KDS) | Apenas PATCH de status de item |
 
 ### Middleware (`src/middleware.ts`)
 Executa em todas as rotas exceto `/login`, `/api/auth`, assets estáticos.
@@ -259,6 +304,24 @@ O card Resultado fica vermelho quando negativo.
 ### Fuso Horário (SP — UTC-3)
 - Meia-noite SP = `03:00:00 UTC`.
 - O módulo financeiro usa `${dateStr}T03:00:00.000Z` como início e `+ 24h - 1ms` como fim de dia.
+
+### Seletor de Preparo Dinâmico
+- A função `extrairOpcoesOu(nome)` detecta `" ou "` no nome do produto.
+- Exemplo: `"Filé de Tilápia Empanado ou Grelhado"` → `["Empanado", "Grelhado"]`.
+- Os botões são gerados dinamicamente — sem hardcode de categoria ou opções.
+- O valor selecionado é incluído no campo `observacoes` do `OrderItem` e exibido no KDS.
+- Compatível com qualquer produto futuro que tenha `" ou "` no nome.
+
+### KDS — Fluxo de Status de Item
+- Ao adicionar item via PDV: `status = "PENDENTE"`, `createdAt = now()`.
+- Ao marcar pronto no KDS: `status = "PRONTO"`, `prontoEm = now()`.
+- A API `/api/cozinha/pedidos` retorna apenas itens do dia atual (SP) e separa por status.
+- A aba Concluídos é zerada automaticamente pela filtragem de data — sem campo extra.
+
+### Cupom Térmico 80mm
+- Gerado na página `/comanda/[id]?print=true` — layout CSS para impressora térmica.
+- No fechamento, o sistema exibe um pop de confirmação perguntando se o cliente quer cupom.
+- O snapshot do pedido é capturado antes do fechamento para garantir que os dados do cupom sejam precisos mesmo após liberar a mesa.
 
 ### Modo Treinamento
 - Detectado via flag `isTrainee` no JWT (email `treinamento@villamill.com`).
@@ -367,6 +430,15 @@ sudo systemctl status nginx              # Status
 | `20260511000001_add_auth_cancel_discount` | Adiciona `email`, `senhaHash` em User; `desconto` em Order; cria CancelamentoLog |
 | `20260511000002_add_credito_debito_pagamento` | Adiciona valores `CREDITO` e `DEBITO` ao enum `FormaPagamento` |
 | `20260512000000_add_despesa` | Cria tabela `Despesa` (id, descricao, valor, categoria, data, registradoPor, createdAt) |
+| `20260514000000_add_pagamentos_split` | Campo `pagamentosSplit` (JSONB) em Order |
+| `20260527110042_parceria_lava_rapido` | Models FuncionarioExterno, CreditoFuncionario, ConsumoFuncionario; enum TipoCreditoFuncionario |
+| `20260527144124_credito_pool_coletivo` | CreditoFuncionario.funcionarioId nullable; campo empresa (pool coletivo) |
+| `20260529040638_add_voucher_pagamento` | Valor VOUCHER no enum FormaPagamento |
+| `20260603025637_add_caixa_model` | Model Caixa (funcionárias autorizadas a abrir mesa) |
+| `20260613000000_add_lancamento_vale` | Model LancamentoVale; campo setor em FuncionarioExterno; enums TipoLancamento e StatusLancamento |
+| `20260613161904_add_opcionais_observacoes` | Campo `opcionais` (JSONB) em Product; campo `observacoes` (TEXT) em OrderItem; remove unique (orderId, productId) |
+| `20260627031855_add_cozinha_kds` | Role COZINHA em UserRole; campos `status` e `createdAt` em OrderItem |
+| `20260627042546_add_pronto_em_order_item` | Campo `prontoEm` (TIMESTAMP) em OrderItem |
 
 ---
 
@@ -423,8 +495,11 @@ O seed usa `updateMany` + `create` baseado no nome. Se o nome mudar, um novo pro
 
 - [x] Deploy em produção (villamill.online com SSL)
 - [x] Módulo de Despesas com integração ao Financeiro
-- [ ] Alterar senha do Admin em produção
+- [x] Impressão de cupom térmico 80mm no fechamento de mesa
+- [x] KDS (Kitchen Display System) com abas Pendentes/Concluídos
+- [x] Opcionais por produto (radio/checkbox) e observações livres no pedido
 - [ ] Relatório por produto (ranking de vendas)
-- [ ] Ativação da lógica de RecipeItem para baixa automática de ingredientes por ficha técnica
+- [ ] Ativação completa da baixa de estoque por ficha técnica (RecipeItem) no fechamento
 - [ ] Gestão de usuários pela interface (criar/editar/excluir sem precisar do Prisma Studio)
-- [ ] Impressão de comanda via impressora térmica (layout `/comanda/[id]` já existe)
+- [ ] Relatório mensal e exportação de dados (CSV/PDF)
+- [ ] Backup automatizado do banco
