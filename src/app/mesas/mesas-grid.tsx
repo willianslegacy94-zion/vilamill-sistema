@@ -122,7 +122,7 @@ export default function MesasGrid() {
 
   // Snapshot do pedido atual — alimenta o print-area enquanto o modal está aberto
   const cupomAtual: DadosCupom | null =
-    pedidoAtivo && mesaEfetiva && pedidoAtivo.items.length > 0
+    pedidoAtivo && mesaEfetiva
       ? {
           mesa: mesaEfetiva.numero,
           items: pedidoAtivo.items.map((it) => ({
