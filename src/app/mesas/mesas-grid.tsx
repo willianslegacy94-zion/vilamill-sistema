@@ -86,6 +86,8 @@ export default function MesasGrid() {
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [opcionaisEscolhidos, setOpcionaisEscolhidos] = useState<Record<string, string[]>>({});
+  const [preparo, setPreparo] = useState("Empanado");
+  const [observacaoLivre, setObservacaoLivre] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [pagamentos, setPagamentos] = useState<PagamentoSplit[]>([{ forma: "DINHEIRO", valor: "" }]);
   const [desconto, setDesconto] = useState(0);
@@ -185,6 +187,8 @@ export default function MesasGrid() {
   function selecionarProduto(id: string) {
     setProdutoId(id);
     setOpcionaisEscolhidos({});
+    setPreparo("Empanado");
+    setObservacaoLivre("");
   }
 
   function toggleRadio(grupoNome: string, opcao: string) {
@@ -275,11 +279,20 @@ export default function MesasGrid() {
   }
 
   function buildObservacoes(): string {
-    return gruposOpcionais.flatMap((g) => {
+    const parts: string[] = [];
+    const temGrupoPreparo = gruposOpcionais.some((g) =>
+      g.nome.toLowerCase().includes("preparo")
+    );
+    const mostrarPreparo =
+      produtoSelecionado?.categoria === "Pratos do Dia" && !temGrupoPreparo;
+    if (mostrarPreparo) parts.push(preparo);
+    gruposOpcionais.forEach((g) => {
       const selecionados = opcionaisEscolhidos[g.nome] ?? [];
-      if (g.tipo === "checkbox") return selecionados.map((o) => `c/ ${o}`);
-      return selecionados;
-    }).join(", ");
+      if (g.tipo === "checkbox") selecionados.forEach((o) => parts.push(`c/ ${o}`));
+      else parts.push(...selecionados);
+    });
+    if (observacaoLivre.trim()) parts.push(`Obs: ${observacaoLivre.trim()}`);
+    return parts.join(" | ");
   }
 
   function adicionarItem() {
@@ -318,6 +331,8 @@ export default function MesasGrid() {
       atualizarSimulado({ ...mesaEfetiva, orders: [{ ...pedidoAtivo, items: novosItens, total: novoTotal }] });
       setQuantidade(1);
       setOpcionaisEscolhidos({});
+      setPreparo("Empanado");
+      setObservacaoLivre("");
       return;
     }
     chamarAPI(() =>
@@ -326,7 +341,12 @@ export default function MesasGrid() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId: produtoId, quantidade, observacoes: obs }),
       })
-    ).then(() => { setQuantidade(1); setOpcionaisEscolhidos({}); });
+    ).then(() => {
+      setQuantidade(1);
+      setOpcionaisEscolhidos({});
+      setPreparo("Empanado");
+      setObservacaoLivre("");
+    });
   }
 
   function removerItem(itemId: string) {
@@ -825,6 +845,52 @@ export default function MesasGrid() {
                             ⚠ Selecione as opções obrigatórias (*)
                           </p>
                         )}
+
+                        {/* Seletor de preparo — apenas para Pratos do Dia sem grupo Preparo no DB */}
+                        {produtoSelecionado?.categoria === "Pratos do Dia" &&
+                          !gruposOpcionais.some((g) => g.nome.toLowerCase().includes("preparo")) && (
+                          <div className="border-t border-slate-100 px-3 py-3">
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                              Preparo <span className="text-red-500">*</span>
+                            </p>
+                            <div className="flex gap-2">
+                              {["Empanado", "Grelhado"].map((opcao) => {
+                                const ativo = preparo === opcao;
+                                return (
+                                  <button
+                                    key={opcao}
+                                    type="button"
+                                    onClick={() => setPreparo(opcao)}
+                                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                                      ativo
+                                        ? "border-slate-800 bg-slate-800 text-white shadow-sm"
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                                    }`}
+                                  >
+                                    <span className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 ${ativo ? "border-white" : "border-slate-400"}`}>
+                                      {ativo && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                    </span>
+                                    {opcao}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Campo de observações livres */}
+                        <div className="border-t border-slate-100 px-3 py-3">
+                          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Observações / Retiradas
+                          </label>
+                          <input
+                            type="text"
+                            value={observacaoLivre}
+                            onChange={(e) => setObservacaoLivre(e.target.value)}
+                            placeholder="Ex: Sem cebola, molho à parte..."
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-slate-400"
+                          />
+                        </div>
 
                         {/* Linha quantidade + botão */}
                         <div className="flex items-center gap-2 px-3 py-2.5 border-t border-slate-100">
