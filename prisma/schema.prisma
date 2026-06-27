@@ -79,16 +79,18 @@ model CancelamentoLog {
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   orderId     String
   productId   String
-  quantidade  Decimal @db.Decimal(10, 3)
-  precoUnit   Decimal @db.Decimal(10, 2)
-  custoUnit   Decimal @db.Decimal(10, 2) @default(0)
-  subtotal    Decimal @db.Decimal(10, 2)
+  quantidade  Decimal  @db.Decimal(10, 3)
+  precoUnit   Decimal  @db.Decimal(10, 2)
+  custoUnit   Decimal  @db.Decimal(10, 2) @default(0)
+  subtotal    Decimal  @db.Decimal(10, 2)
   observacoes String?
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id])
+  status      String   @default("PENDENTE")
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
 }
 
 model User {
@@ -132,6 +134,7 @@ enum FormaPagamento {
 enum UserRole {
   ADMIN
   CAIXA
+  COZINHA
 }
 
 enum IngredientUnit {

@@ -18,6 +18,14 @@ export default auth((req) => {
     return NextResponse.json({ ok: true, _treinamento: true })
   }
 
+  // COZINHA: acesso exclusivo a /cozinha/*
+  if (role === "COZINHA" && !isApi) {
+    const allowed = pathname === "/cozinha" || pathname.startsWith("/cozinha/")
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/cozinha", req.url))
+    }
+  }
+
   // CAIXA: bloqueia acesso direto às páginas restritas (trainee tem acesso total)
   if (role === "CAIXA" && !isTrainee && !isApi) {
     const allowedPages = ["/", "/mesas", "/produtos", "/estoque"]
