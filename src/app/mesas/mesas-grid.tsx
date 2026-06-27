@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useMesas } from "@/hooks/useAppData";
+import CupomImpressao, { DadosCupom } from "@/components/cupom-impressao";
 
 type GrupoOpcional = { nome: string; obrigatorio: boolean; tipo: "radio" | "checkbox"; limite?: number; opcoes: string[] };
 type ProdutoAPI = { id: string; nome: string; preco: string; categoria: string; opcionais?: GrupoOpcional[] | null };
@@ -23,6 +24,7 @@ type PedidoComItens = {
   mesaId: string;
   paymentStatus: string;
   total: string;
+  caixaNome?: string | null;
   items: ItemPedido[];
 };
 
@@ -96,6 +98,7 @@ export default function MesasGrid() {
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [caixaNome, setCaixaNome] = useState("");
   const [caixasDisponiveis, setCaixasDisponiveis] = useState<{ id: string; nome: string }[]>([]);
+  const [dadosCupom, setDadosCupom] = useState<DadosCupom | null>(null);
 
   useEffect(() => {
     fetch("/api/caixas").then((r) => r.json()).then(setCaixasDisponiveis).catch(() => {});
@@ -116,6 +119,28 @@ export default function MesasGrid() {
   const podeFechar =
     (pedidoAtivo?.items.length ?? 0) > 0 &&
     (totalComDesconto === 0 || Math.abs(restante) < 0.01);
+
+  // Snapshot do pedido atual — alimenta o print-area enquanto o modal está aberto
+  const cupomAtual: DadosCupom | null =
+    pedidoAtivo && mesaEfetiva && pedidoAtivo.items.length > 0
+      ? {
+          mesa: mesaEfetiva.numero,
+          items: pedidoAtivo.items.map((it) => ({
+            quantidade: it.quantidade,
+            subtotal: it.subtotal,
+            observacoes: it.observacoes,
+            product: { nome: it.product.nome, categoria: it.product.categoria },
+          })),
+          subtotal: Number(pedidoAtivo.total),
+          desconto,
+          total: totalComDesconto,
+          pagamentos: pagamentos
+            .filter((p) => Number(p.valor) > 0)
+            .map((p) => ({ forma: p.forma, valor: Number(p.valor) })),
+          atendente: pedidoAtivo.caixaNome || nomeUsuario,
+          fechadoEm: new Date(),
+        }
+      : null;
 
   useEffect(() => {
     if (!mesaIdSelecionada) return;
@@ -313,17 +338,43 @@ export default function MesasGrid() {
     );
   }
 
-  function fecharConta() {
+  async function fecharConta() {
     if (!pedidoAtivo || !mesaEfetiva) return;
     if (isTrainee) { limparSimulado(mesaEfetiva.id); fecharModal(); return; }
+
     const pags = buildPagamentosPayload();
-    chamarAPI(() =>
-      fetch(`/api/pedidos/${pedidoAtivo.id}/fechar-e-liberar`, {
+    const snapshot: DadosCupom = {
+      mesa: mesaEfetiva.numero,
+      items: pedidoAtivo.items.map((it) => ({
+        quantidade: it.quantidade,
+        subtotal: it.subtotal,
+        observacoes: it.observacoes,
+        product: { nome: it.product.nome, categoria: it.product.categoria },
+      })),
+      subtotal: Number(pedidoAtivo.total),
+      desconto,
+      total: totalComDesconto,
+      pagamentos: pags,
+      atendente: pedidoAtivo.caixaNome || nomeUsuario,
+      fechadoEm: new Date(),
+    };
+
+    setCarregando(true);
+    try {
+      const res = await fetch(`/api/pedidos/${pedidoAtivo.id}/fechar-e-liberar`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma, valor: 0 }], desconto }),
-      })
-    ).then(fecharModal);
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+      fecharModal();
+      setDadosCupom(snapshot);
+    } catch {
+      alert("Ocorreu um erro ao fechar a conta. Tente novamente.");
+    } finally {
+      setCarregando(false);
+    }
   }
 
   function fecharELiberar() {
@@ -854,6 +905,18 @@ export default function MesasGrid() {
                     {carregando ? "Fechando..." : "Fechar Conta"}
                   </Button>
 
+                  {cupomAtual && (
+                    <button
+                      onClick={() => window.print()}
+                      className="w-full rounded-lg border border-slate-300 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 active:bg-slate-100 flex items-center justify-center gap-2"
+                    >
+                      <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Imprimir Cupom
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setShowCancelModal(true)}
                     disabled={carregando}
@@ -911,6 +974,86 @@ export default function MesasGrid() {
             </div>
           </div>
         </div>
+      )}
+      {/* Área de impressão — oculta na tela, sempre disponível quando há pedido ativo ou pós-fechamento */}
+      {(cupomAtual ?? dadosCupom) && (
+        <CupomImpressao dados={(cupomAtual ?? dadosCupom)!} />
+      )}
+
+      {/* Overlay pós-pagamento */}
+      {dadosCupom && (
+        <>
+          {/* (print-area já renderizado acima via dadosCupom) */}
+
+          {/* Modal de confirmação */}
+          <div className="fixed inset-0 z-[70] flex items-end sm:items-center sm:justify-center bg-black/60 sm:px-4">
+            <div className="w-full sm:max-w-xs rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
+              <div className="flex justify-center pt-3 sm:hidden">
+                <div className="h-1 w-10 rounded-full bg-slate-300" />
+              </div>
+
+              <div className="p-6">
+                {/* Ícone de sucesso */}
+                <div className="mb-4 text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                    <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">Conta fechada!</h3>
+                  <p className="text-sm text-slate-500">
+                    Mesa {dadosCupom.mesa} · {dadosCupom.fechadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+
+                {/* Resumo financeiro */}
+                <div className="mb-5 space-y-1 rounded-lg bg-slate-50 p-3 text-sm">
+                  {dadosCupom.desconto > 0 && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>Subtotal</span>
+                      <span>{moeda(dadosCupom.subtotal)}</span>
+                    </div>
+                  )}
+                  {dadosCupom.desconto > 0 && (
+                    <div className="flex justify-between text-amber-600">
+                      <span>Desconto</span>
+                      <span>− {moeda(dadosCupom.desconto)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold">
+                    <span>Total pago</span>
+                    <span>{moeda(dadosCupom.total)}</span>
+                  </div>
+                  {dadosCupom.pagamentos.filter((p) => p.valor > 0).map((pag, i) => (
+                    <div key={i} className="flex justify-between text-slate-500 text-xs">
+                      <span>{PAGAMENTOS.find((p) => p.valor === pag.forma)?.label ?? pag.forma}</span>
+                      <span>{moeda(pag.valor)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ações */}
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="w-full rounded-xl bg-slate-900 py-4 text-sm font-bold text-white hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Imprimir Cupom
+                  </button>
+                  <button
+                    onClick={() => setDadosCupom(null)}
+                    className="w-full rounded-xl border border-slate-300 py-4 text-sm font-medium text-slate-600 hover:bg-slate-50 active:bg-slate-100"
+                  >
+                    Fechar sem imprimir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </>
   );
