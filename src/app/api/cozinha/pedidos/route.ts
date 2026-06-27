@@ -14,7 +14,6 @@ const CATEGORIAS_COZINHA = [
 export async function GET() {
   const items = await prisma.orderItem.findMany({
     where: {
-      status: "PENDENTE",
       product: { categoria: { in: CATEGORIAS_COZINHA } },
       order: { paymentStatus: "PENDENTE" },
     },
