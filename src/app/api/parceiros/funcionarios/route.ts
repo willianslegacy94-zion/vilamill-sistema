@@ -23,6 +23,7 @@ export async function GET() {
     const resultado = funcionarios.map((f) => ({
       id: f.id,
       nome: f.nome,
+      empresa: f.empresa,
       setor: f.setor,
       saldo: saldoPorId[f.id] ?? 0,
     }));

@@ -44,21 +44,6 @@ const STATUS = {
   CONTA:   { label: "Conta",   bg: "bg-red-100",  border: "border-red-500",   badge: "bg-red-200 text-red-900" },
 } as const;
 
-const CATEGORIAS = [
-  "Lavagem",
-  "Pratos do Dia",
-  "Todos os Dias",
-  "Acompanhamentos",
-  "Lanches Tradicionais",
-  "Lanches na Baguete",
-  "Lanches Artesanais",
-  "Porções",
-  "Sucos",
-  "Refrigerantes",
-  "Cervejas",
-  "Sobremesas",
-];
-
 const PAGAMENTOS: { valor: FormaPagamento; label: string }[] = [
   { valor: "DINHEIRO", label: "Dinheiro"      },
   { valor: "CREDITO",  label: "Crédito"       },
@@ -188,6 +173,13 @@ export default function MesasGrid() {
       return matchBusca && matchCat;
     });
   }, [produtos, busca, categoriaAtiva]);
+
+  // Categorias derivadas dos produtos cadastrados — acompanha automaticamente
+  // qualquer categoria nova criada no cardápio, sem precisar editar código.
+  const categoriasDisponiveis = useMemo(
+    () => Array.from(new Set(produtos.map((p) => p.categoria))).sort(),
+    [produtos]
+  );
 
   const produtoSelecionado = produtos.find((p) => p.id === produtoId) ?? null;
   const gruposOpcionais = (produtoSelecionado?.opcionais ?? []) as GrupoOpcional[];
@@ -713,7 +705,7 @@ export default function MesasGrid() {
                       >
                         Todos
                       </button>
-                      {CATEGORIAS.map((cat) => (
+                      {categoriasDisponiveis.map((cat) => (
                         <button
                           key={cat}
                           onClick={() => { setCategoriaAtiva(cat); setBusca(""); }}

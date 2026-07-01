@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/services/prisma";
 
+// Equipe interna: registro de consumo livre, sem checagem de saldo/caixinha.
+const EMPRESA_SEM_SALDO = "Equipe Villa Mill";
+
 export async function POST(request: NextRequest) {
   try {
   const { funcionarioId, productId, quantidade, registradoPor } = await request.json();
@@ -22,23 +25,25 @@ export async function POST(request: NextRequest) {
 
   // Saldo do pool coletivo da empresa (valor depositado menos tudo que foi consumido pelo grupo)
   const empresa = funcionario.empresa;
-  const [creditosPool, consumosPool] = await Promise.all([
-    prisma.creditoFuncionario.findMany({
-      where: { empresa, tipo: "COLETIVO", liquidado: false },
-    }),
-    prisma.consumoFuncionario.findMany({
-      where: { funcionario: { empresa }, liquidado: false },
-    }),
-  ]);
-  const saldoPool =
-    creditosPool.reduce((s, c) => s + Number(c.valor), 0) -
-    consumosPool.reduce((s, c) => s + Number(c.subtotal), 0);
+  if (empresa !== EMPRESA_SEM_SALDO) {
+    const [creditosPool, consumosPool] = await Promise.all([
+      prisma.creditoFuncionario.findMany({
+        where: { empresa, tipo: "COLETIVO", liquidado: false },
+      }),
+      prisma.consumoFuncionario.findMany({
+        where: { funcionario: { empresa }, liquidado: false },
+      }),
+    ]);
+    const saldoPool =
+      creditosPool.reduce((s, c) => s + Number(c.valor), 0) -
+      consumosPool.reduce((s, c) => s + Number(c.subtotal), 0);
 
-  if (subtotal > saldoPool) {
-    return NextResponse.json(
-      { error: `Saldo insuficiente na caixinha. Disponível: R$ ${saldoPool.toFixed(2)}`, saldo: saldoPool },
-      { status: 422 }
-    );
+    if (subtotal > saldoPool) {
+      return NextResponse.json(
+        { error: `Saldo insuficiente na caixinha. Disponível: R$ ${saldoPool.toFixed(2)}`, saldo: saldoPool },
+        { status: 422 }
+      );
+    }
   }
 
   // Registrar consumo e deduzir estoque
