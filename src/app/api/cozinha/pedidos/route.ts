@@ -9,6 +9,7 @@ const CATEGORIAS_COZINHA = [
   "Lanches na Baguete",
   "Lanches Artesanais",
   "Porções",
+  "Café da Manhã",
 ];
 
 function inicioDoDia() {
