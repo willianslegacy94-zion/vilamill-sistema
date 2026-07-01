@@ -84,6 +84,7 @@ type ConsumoCaixinha = {
   product: { nome: string };
   quantidade: string | number; precoUnit: string | number; subtotal: string | number;
   registradoPor: string; registradoEm: string;
+  liquidado: boolean; liquidadoEm: string | null;
 };
 type LancamentoVale = {
   id: string; tipo: "DINHEIRO" | "PRODUTO";
@@ -94,6 +95,7 @@ type LancamentoVale = {
 type EntradaExtrato = {
   id: string; kind: "credito" | "baixa"; data: string;
   destino: string; descricao: string; registradoPor: string; valor: number;
+  liquidado?: boolean;
 };
 type ConfirmDelete = {
   id: string; kind: "transacao" | "credito" | "baixa"; label: string;
@@ -371,6 +373,25 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
+  // ── Baixa (liquidação) de consumo ─────────────────────────────
+  const [liquidando, setLiquidando] = useState<string | null>(null);
+  async function marcarLiquidado(id: string) {
+    setLiquidando(id);
+    try {
+      const res = await fetch(`/api/parceiros/consumo/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ liquidado: true }),
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+    } catch {
+      alert("Erro ao dar baixa. Tente novamente.");
+    } finally {
+      setLiquidando(null);
+    }
+  }
+
   // ── Edição caixinha ──────────────────────────────────────────
   function abrirEdicaoCaixinha(entrada: EntradaExtrato, creditos: CreditoCaixinha[], consumos: ConsumoCaixinha[]) {
     if (entrada.kind === "credito") {
@@ -479,6 +500,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       descricao: `${Number(c.quantidade) % 1 === 0 ? Number(c.quantidade).toFixed(0) : Number(c.quantidade).toFixed(1)}× ${c.product.nome}`,
       registradoPor: c.registradoPor,
       valor: Number(c.subtotal),
+      liquidado: c.liquidado,
     })),
   ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
@@ -1010,6 +1032,22 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                     {isAdmin && (
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-3">
+                          {e.kind === "baixa" && (
+                            e.liquidado ? (
+                              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                Pago
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => marcarLiquidado(e.id)}
+                                disabled={liquidando === e.id}
+                                className="text-xs font-medium text-emerald-600 hover:text-emerald-800 disabled:opacity-40"
+                                title="Marcar consumo como pago"
+                              >
+                                {liquidando === e.id ? "Salvando..." : "Dar baixa"}
+                              </button>
+                            )
+                          )}
                           <button
                             onClick={() => abrirEdicaoCaixinha(e, creditosCaixinha, consumosCaixinha)}
                             className="text-xs font-medium text-blue-500 hover:text-blue-700"

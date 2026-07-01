@@ -26,12 +26,14 @@ export default function EquipeGrid() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState("");
+  const [carregandoPessoas, setCarregandoPessoas] = useState(true);
 
   useEffect(() => {
     fetch("/api/parceiros/funcionarios")
       .then((r) => r.json())
       .then((data: FuncionarioAPI[]) => setPessoas(data.filter((f) => f.empresa === EMPRESA_EQUIPE)))
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setCarregandoPessoas(false));
     fetch("/api/produtos")
       .then((r) => r.json())
       .then((data: ProdutoAPI[]) => setProdutos(data))
@@ -100,6 +102,13 @@ export default function EquipeGrid() {
 
   return (
     <>
+      {!carregandoPessoas && pessoas.length === 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Nenhuma pessoa cadastrada na Equipe Villa Mill. Cadastre em{" "}
+          <a href="/parceiros" className="underline font-semibold">Parceiros</a>{" "}
+          (empresa &quot;{EMPRESA_EQUIPE}&quot;) ou rode o script de seed.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {pessoas.map((pessoa) => (
           <button

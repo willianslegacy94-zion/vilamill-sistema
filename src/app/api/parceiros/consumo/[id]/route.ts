@@ -16,13 +16,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
   const { id } = await params;
-  const { quantidade } = await request.json();
+  const body = await request.json();
 
   const registro = await prisma.consumoFuncionario.findUnique({ where: { id } });
   if (!registro)
     return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
 
-  const novaQtd = Number(quantidade);
+  if (typeof body.liquidado === "boolean") {
+    const atualizado = await prisma.consumoFuncionario.update({
+      where: { id },
+      data: { liquidado: body.liquidado, liquidadoEm: body.liquidado ? new Date() : null },
+    });
+    return NextResponse.json(atualizado);
+  }
+
+  const novaQtd = Number(body.quantidade);
   const novoSubtotal = Number((Number(registro.precoUnit) * novaQtd).toFixed(2));
 
   await prisma.consumoFuncionario.update({
