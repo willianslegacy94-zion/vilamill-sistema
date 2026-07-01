@@ -75,12 +75,12 @@ type Despesa = {
 };
 type CreditoCaixinha = {
   id: string; tipo: "INDIVIDUAL" | "COLETIVO";
-  funcionario: { nome: string } | null;
+  funcionario: { nome: string; empresa: string } | null;
   empresa: string | null; valor: string | number;
   descricao: string | null; registradoPor: string; registradoEm: string;
 };
 type ConsumoCaixinha = {
-  id: string; funcionario: { nome: string };
+  id: string; funcionario: { nome: string; empresa: string };
   product: { nome: string };
   quantidade: string | number; precoUnit: string | number; subtotal: string | number;
   registradoPor: string; registradoEm: string;
@@ -95,7 +95,7 @@ type LancamentoVale = {
 type EntradaExtrato = {
   id: string; kind: "credito" | "baixa"; data: string;
   destino: string; descricao: string; registradoPor: string; valor: number;
-  liquidado?: boolean;
+  liquidado?: boolean; grupo: string;
 };
 type ConfirmDelete = {
   id: string; kind: "transacao" | "credito" | "baixa"; label: string;
@@ -493,6 +493,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       descricao: c.descricao || "—",
       registradoPor: c.registradoPor,
       valor: Number(c.valor),
+      grupo: (c.tipo === "INDIVIDUAL" ? c.funcionario?.empresa : c.empresa) ?? "Lava-Rápido",
     })),
     ...consumosCaixinha.map((c) => ({
       id: c.id, kind: "baixa" as const, data: c.registradoEm,
@@ -501,6 +502,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       registradoPor: c.registradoPor,
       valor: Number(c.subtotal),
       liquidado: c.liquidado,
+      grupo: c.funcionario.empresa,
     })),
   ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
@@ -967,12 +969,12 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
         </section>
       )}
 
-      {/* ── Caixinha — Lava-Rápido ────────────────────────────── */}
+      {/* ── Caixinha / Consumo de Funcionários ────────────────── */}
       {temCaixinha && (
         <section className="border-t border-slate-100 pt-6">
           <SectionHeader>
             <h2 className="text-base font-bold text-violet-700">
-              Caixinha — Lava-Rápido
+              Caixinha
               <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
             </h2>
           </SectionHeader>
@@ -1001,6 +1003,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                 <tr>
                   <th className="px-5 py-3.5 text-left">Data / Hora</th>
                   <th className="px-5 py-3.5 text-left">Tipo</th>
+                  <th className="px-5 py-3.5 text-left">Grupo</th>
                   <th className="px-5 py-3.5 text-left">Funcionário / Destino</th>
                   <th className="px-5 py-3.5 text-left">Descrição</th>
                   <th className="px-5 py-3.5 text-left">Registrado por</th>
@@ -1022,6 +1025,11 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                           <span>−</span> Baixa
                         </span>
                       )}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 whitespace-nowrap">
+                        {e.grupo}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 font-medium text-slate-900">{e.destino}</td>
                     <td className="px-5 py-3.5 text-slate-500">{e.descricao}</td>
@@ -1073,7 +1081,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
               </tbody>
               <tfoot className="border-t-2 border-violet-200 bg-violet-50">
                 <tr>
-                  <td colSpan={isAdmin ? 6 : 5} className="px-5 py-3.5 text-sm font-bold text-violet-700">
+                  <td colSpan={isAdmin ? 7 : 6} className="px-5 py-3.5 text-sm font-bold text-violet-700">
                     Saldo do período
                   </td>
                   <td className={`px-5 py-3.5 text-right text-base font-bold ${saldoCaixinha >= 0 ? "text-emerald-700" : "text-red-700"}`}>
