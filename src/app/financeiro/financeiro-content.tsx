@@ -44,7 +44,7 @@ type Item = {
   id: string; productId: string;
   custoUnit: string | number; precoUnit: string | number;
   quantidade: string | number; subtotal: string | number;
-  product: { id: string; nome: string; preco: string | number };
+  product: { id: string; nome: string; preco: string | number; categoria: string };
 };
 type Pedido = {
   id: string; total: string | number; desconto: string | number; formaPagamento: string | null;
@@ -106,6 +106,10 @@ type EditCaixinha = {
   id: string; kind: "credito" | "baixa"; destino: string;
   valor: number; descricao: string;
   quantidade: number; precoUnit: number;
+};
+type LancamentoLavagem = {
+  id: string; mesa: number; responsavel: string | null;
+  data: string | null; produto: string; valor: number;
 };
 
 const PAGAMENTOS_OPTIONS = [
@@ -717,6 +721,29 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const resultado     = receitaBruta - cmv - totalDespesas;
   const ticketMedio   = pedidosFechados.length > 0 ? receitaBruta / pedidosFechados.length : 0;
 
+  // Lavagem — lançamentos do período (categoria de produto "Lavagem")
+  const lancamentosLavagem: LancamentoLavagem[] = pedidosFechados.flatMap((p) =>
+    p.items
+      .filter((i) => i.product.categoria === "Lavagem")
+      .map((i) => ({
+        id: i.id,
+        mesa: p.table.numero,
+        responsavel: p.caixaNome,
+        data: p.closedAt,
+        produto: i.product.nome,
+        valor: Number(i.subtotal),
+      }))
+  );
+  const totalLavagem = lancamentosLavagem.reduce((s, i) => s + i.valor, 0);
+  const temLavagem   = lancamentosLavagem.length > 0;
+
+  // Transações — exclui pedidos 100% de Lavagem (esses só aparecem na seção exclusiva abaixo)
+  const pedidosFechadosSemLavagem = pedidosFechados.filter(
+    (p) => !p.items.every((i) => i.product.categoria === "Lavagem")
+  );
+  const receitaBrutaSemLavagem = pedidosFechadosSemLavagem.reduce((s, p) => s + Number(p.total), 0);
+  const cmvSemLavagem = pedidosFechadosSemLavagem.reduce((s, p) => s + p.items.reduce((si, i) => si + Number(i.custoUnit) * Number(i.quantidade), 0), 0);
+
   const todasEntradas: PagEntry[] = pedidosFechados.flatMap((p) => {
     if (p.pagamentosSplit && p.pagamentosSplit.length > 0) return p.pagamentosSplit;
     return [{ forma: p.formaPagamento ?? "DINHEIRO", valor: Number(p.total) }];
@@ -841,7 +868,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
           </Card>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Card>
             <CardHeader>
               <CardDescription className="text-xs font-semibold uppercase tracking-wide">Pedidos fechados</CardDescription>
@@ -858,6 +885,15 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
             <CardHeader>
               <CardDescription className="text-xs font-semibold uppercase tracking-wide">Mesas abertas agora</CardDescription>
               <CardTitle className="text-2xl mt-1 text-amber-600">{pedidosAbertos.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className="border-cyan-200 bg-cyan-50">
+            <CardHeader>
+              <CardDescription className="text-cyan-700 text-xs font-semibold uppercase tracking-wide">Lavagem</CardDescription>
+              <CardTitle className="text-2xl mt-1 text-cyan-800">{moeda(totalLavagem)}</CardTitle>
+              <p className="text-xs text-cyan-600 mt-1">
+                {lancamentosLavagem.length} lançamento{lancamentosLavagem.length !== 1 ? "s" : ""} no período
+              </p>
             </CardHeader>
           </Card>
         </div>
@@ -994,6 +1030,77 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                   <td className="px-5 py-3.5 text-right text-sm font-bold text-red-700">{moeda(cmv)}</td>
                   <td className="px-5 py-3.5 text-right text-base font-bold text-green-700">{moeda(receitaBruta)}</td>
                   <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ── Villamil (mesas do restaurante, sem Lavagem) ──────── */}
+      <section className="border-t border-slate-100 pt-6">
+        <SectionHeader>
+          <h2 className="text-base font-bold text-slate-800">
+            Villamil
+            <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
+          </h2>
+        </SectionHeader>
+        {pedidosFechadosSemLavagem.length === 0 ? (
+          <p className="text-sm text-slate-400">Nenhuma venda de restaurante registrada neste período.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3.5 text-left">Mesa</th>
+                  <th className="px-5 py-3.5 text-left">Data / Hora</th>
+                  <th className="px-5 py-3.5 text-left">Caixa</th>
+                  <th className="px-5 py-3.5 text-left">Pagamento</th>
+                  <th className="px-5 py-3.5 text-right">CMV</th>
+                  <th className="px-5 py-3.5 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pedidosFechadosSemLavagem.map((p) => {
+                  const cmvPedido = p.items.reduce((s, i) => s + Number(i.custoUnit) * Number(i.quantidade), 0);
+                  return (
+                    <tr key={p.id} className="bg-white hover:bg-slate-50 transition-colors">
+                      <td className="px-5 py-3.5 font-semibold text-slate-900">Mesa {p.table.numero}</td>
+                      <td className="px-5 py-3.5 text-slate-500">
+                        {p.closedAt ? formatDataHora(p.closedAt) : "—"}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-600 text-xs">
+                        {p.caixaNome ?? <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {p.pagamentosSplit && p.pagamentosSplit.length > 1 ? (
+                          <div className="flex flex-col gap-1">
+                            {p.pagamentosSplit.map((e, i) => (
+                              <div key={i} className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${pagColor[e.forma] ?? "bg-slate-100 text-slate-500"}`}>
+                                  {pagLabel[e.forma] ?? e.forma}
+                                </span>
+                                <span className="text-xs text-slate-400">{moeda(e.valor)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${pagColor[p.formaPagamento ?? ""] ?? "bg-slate-100 text-slate-500"}`}>
+                            {pagLabel[p.formaPagamento ?? ""] ?? "—"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-red-600">{moeda(cmvPedido)}</td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-green-700">{moeda(Number(p.total))}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                <tr>
+                  <td colSpan={4} className="px-5 py-3.5 text-sm font-bold text-slate-700">Total do período</td>
+                  <td className="px-5 py-3.5 text-right text-sm font-bold text-red-700">{moeda(cmvSemLavagem)}</td>
+                  <td className="px-5 py-3.5 text-right text-base font-bold text-green-700">{moeda(receitaBrutaSemLavagem)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -1449,6 +1556,59 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
             </table>
           </div>
           </>
+          )}
+        </section>
+      )}
+
+      {/* ── Lavagens ──────────────────────────────────────────── */}
+      {(temLavagem || isAdmin) && (
+        <section className="border-t border-slate-100 pt-6">
+          <SectionHeader>
+            <h2 className="text-base font-bold text-cyan-700">
+              Lavagens
+              <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
+              {lancamentosLavagem.length > 0 && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-semibold text-cyan-700">
+                  {lancamentosLavagem.length}
+                </span>
+              )}
+            </h2>
+          </SectionHeader>
+          {!temLavagem ? (
+            <p className="text-sm text-slate-400">Nenhum lançamento de lavagem neste período.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-cyan-200">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead className="bg-cyan-50 text-xs font-semibold uppercase tracking-wide text-cyan-600">
+                  <tr>
+                    <th className="px-5 py-3.5 text-left">Mesa</th>
+                    <th className="px-5 py-3.5 text-left">Data / Hora</th>
+                    <th className="px-5 py-3.5 text-left">Responsável</th>
+                    <th className="px-5 py-3.5 text-left">Serviço</th>
+                    <th className="px-5 py-3.5 text-right">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-cyan-100">
+                  {lancamentosLavagem.map((l) => (
+                    <tr key={l.id} className="bg-white hover:bg-cyan-50 transition-colors">
+                      <td className="px-5 py-3.5 font-semibold text-slate-900">Mesa {l.mesa}</td>
+                      <td className="px-5 py-3.5 text-slate-500">{l.data ? formatDataHora(l.data) : "—"}</td>
+                      <td className="px-5 py-3.5 text-slate-600 text-xs">
+                        {l.responsavel ?? <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-600">{l.produto}</td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-cyan-700">{moeda(l.valor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-cyan-200 bg-cyan-50">
+                  <tr>
+                    <td colSpan={4} className="px-5 py-3.5 text-sm font-bold text-cyan-700">Total do período</td>
+                    <td className="px-5 py-3.5 text-right text-base font-bold text-slate-800">{moeda(totalLavagem)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           )}
         </section>
       )}
