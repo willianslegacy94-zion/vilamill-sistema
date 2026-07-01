@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/services/prisma";
+import { isAdmin } from "@/lib/require-admin";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    if (!(await isAdmin())) {
       return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
     }
 

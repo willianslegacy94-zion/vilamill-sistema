@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/services/prisma";
-
-async function checkAdmin() {
-  const session = await auth();
-  if (!session || (session.user as any)?.role !== "ADMIN") return false;
-  return true;
-}
+import { isAdmin } from "@/lib/require-admin";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await checkAdmin()))
+  if (!(await isAdmin()))
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
   const { id } = await params;
@@ -45,7 +39,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await checkAdmin()))
+  if (!(await isAdmin()))
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
   const { id } = await params;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/services/prisma";
+import { isAdmin } from "@/lib/require-admin";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAdmin()))
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+
   const { descricao, valor, categoria, data, registradoPor } = await request.json();
   if (!descricao || !valor || !categoria || !data || !registradoPor) {
     return NextResponse.json({ error: "Todos os campos são obrigatórios." }, { status: 400 });

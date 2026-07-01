@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/services/prisma";
+import { isAdmin } from "@/lib/require-admin";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAdmin()))
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+
   const { id } = await params;
   const { total, desconto, caixaNome, formaPagamento, pagamentosSplit, createdAt, closedAt } = await request.json();
 
@@ -44,6 +48,8 @@ export async function DELETE(
 
   if (pedido.paymentStatus === "PAGO") {
     // Exclusão administrativa (financeiro) — sem log de cancelamento, mesa já LIVRE
+    if (!(await isAdmin()))
+      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     await prisma.$transaction([
       prisma.orderItem.deleteMany({ where: { orderId: id } }),
       prisma.order.delete({ where: { id } }),

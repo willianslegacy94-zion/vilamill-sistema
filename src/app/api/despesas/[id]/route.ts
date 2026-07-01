@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/services/prisma";
+import { isAdmin } from "@/lib/require-admin";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin()))
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+
   const { id } = await params;
   const { descricao, valor, categoria, data } = await request.json();
   const despesa = await prisma.despesa.update({
@@ -17,6 +21,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin()))
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+
   const { id } = await params;
   await prisma.despesa.delete({ where: { id } });
   return NextResponse.json({ ok: true });

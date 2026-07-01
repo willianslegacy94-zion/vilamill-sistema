@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -60,6 +61,7 @@ const CATEGORIAS_CARDAPIO = [
   "Lanches Tradicionais", "Lanches na Baguete", "Lanches Artesanais",
   "Porções", "Sucos", "Refrigerantes", "Cervejas", "Sobremesas",
 ];
+const CATEGORIAS_DESPESA = ["Mercadoria", "Serviços", "Manutenção", "Funcionários", "Aluguel", "Outros"];
 type PedidoAberto = {
   id: string; total: string | number; createdAt: string;
   caixaNome: string | null;
@@ -98,7 +100,7 @@ type EntradaExtrato = {
   liquidado?: boolean; grupo: string;
 };
 type ConfirmDelete = {
-  id: string; kind: "transacao" | "credito" | "baixa"; label: string;
+  id: string; kind: "transacao" | "credito" | "baixa" | "despesa" | "cancelamento" | "vale"; label: string;
 };
 type EditCaixinha = {
   id: string; kind: "credito" | "baixa"; destino: string;
@@ -157,6 +159,8 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const params = useSearchParams();
   const fromStr = params.get("from") ?? primeiroDiaMes();
   const toStr   = params.get("to")   ?? hojeStr();
+  const { data: session } = useSession();
+  const nomeOperador = session?.user?.email ?? session?.user?.name ?? "sistema";
 
   // ── Estado: edição de transação ──────────────────────────────
   const [editando, setEditando] = useState<Pedido | null>(null);
@@ -175,13 +179,255 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const [editCategoria, setEditCategoria] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  // ── Estado: incluir venda manual ──────────────────────────────
+  const [mesasDisponiveis, setMesasDisponiveis] = useState<{ id: string; numero: number }[]>([]);
+  const [novaTransacao, setNovaTransacao] = useState(false);
+  const [novaTransacaoMesaId, setNovaTransacaoMesaId] = useState("");
+  const [novaTransacaoData, setNovaTransacaoData] = useState("");
+  const [criandoTransacao, setCriandoTransacao] = useState(false);
+
+  // ── Estado: CRUD de despesa ────────────────────────────────────
+  const despesaFormVazio = { descricao: "", valor: "", categoria: CATEGORIAS_DESPESA[0], data: "" };
+  const [despesaModo, setDespesaModo] = useState<"novo" | "editar" | null>(null);
+  const [despesaForm, setDespesaForm] = useState(despesaFormVazio);
+  const [despesaEditandoId, setDespesaEditandoId] = useState<string | null>(null);
+  const [salvandoDespesa, setSalvandoDespesa] = useState(false);
+
+  function abrirNovaDespesa() {
+    setDespesaForm({ ...despesaFormVazio, data: hojeStr() });
+    setDespesaEditandoId(null);
+    setDespesaModo("novo");
+  }
+  function abrirEditarDespesa(d: Despesa) {
+    setDespesaForm({
+      descricao: d.descricao,
+      valor: Number(d.valor).toFixed(2),
+      categoria: d.categoria,
+      data: new Date(d.data).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }),
+    });
+    setDespesaEditandoId(d.id);
+    setDespesaModo("editar");
+  }
+  async function salvarDespesa() {
+    if (!despesaForm.descricao || !despesaForm.valor || !despesaForm.data) return;
+    setSalvandoDespesa(true);
+    try {
+      const dataISO = new Date(`${despesaForm.data}T12:00:00-03:00`).toISOString();
+      const url = despesaModo === "novo" ? "/api/despesas" : `/api/despesas/${despesaEditandoId}`;
+      const res = await fetch(url, {
+        method: despesaModo === "novo" ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...despesaForm,
+          valor: Number(despesaForm.valor),
+          data: dataISO,
+          ...(despesaModo === "novo" && { registradoPor: nomeOperador }),
+        }),
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+      setDespesaModo(null);
+    } catch {
+      alert("Erro ao salvar despesa. Tente novamente.");
+    } finally {
+      setSalvandoDespesa(false);
+    }
+  }
+
+  // ── Estado: editar cancelamento ────────────────────────────────
+  const [cancelamentoEditando, setCancelamentoEditando] = useState<Cancelamento | null>(null);
+  const [cancelForm, setCancelForm] = useState({ mesaNumero: "", motivoCancelamento: "", canceladoPor: "", canceladoEm: "" });
+  const [salvandoCancelamento, setSalvandoCancelamento] = useState(false);
+
+  function abrirEditarCancelamento(c: Cancelamento) {
+    setCancelForm({
+      mesaNumero: String(c.mesaNumero),
+      motivoCancelamento: c.motivoCancelamento ?? "",
+      canceladoPor: c.canceladoPor,
+      canceladoEm: toDatetimeLocal(c.canceladoEm),
+    });
+    setCancelamentoEditando(c);
+  }
+  async function salvarCancelamento() {
+    if (!cancelamentoEditando) return;
+    setSalvandoCancelamento(true);
+    try {
+      const res = await fetch(`/api/cancelamentos/${cancelamentoEditando.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mesaNumero: Number(cancelForm.mesaNumero),
+          motivoCancelamento: cancelForm.motivoCancelamento || null,
+          canceladoPor: cancelForm.canceladoPor,
+          canceladoEm: fromDatetimeLocal(cancelForm.canceladoEm),
+        }),
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+      setCancelamentoEditando(null);
+    } catch {
+      alert("Erro ao salvar cancelamento. Tente novamente.");
+    } finally {
+      setSalvandoCancelamento(false);
+    }
+  }
+
+  // ── Estado: CRUD de vale ────────────────────────────────────────
+  const [funcionariosDisponiveis, setFuncionariosDisponiveis] = useState<{ id: string; nome: string; empresa: string }[]>([]);
+  const valeFormVazio = { colaboradorId: "", tipo: "DINHEIRO" as "DINHEIRO" | "PRODUTO", descricao: "", valor: "", status: "PENDENTE" as "PENDENTE" | "PAGO" };
+  const [valeModo, setValeModo] = useState<"novo" | "editar" | null>(null);
+  const [valeForm, setValeForm] = useState(valeFormVazio);
+  const [valeEditandoId, setValeEditandoId] = useState<string | null>(null);
+  const [salvandoVale, setSalvandoVale] = useState(false);
+
+  function abrirNovoVale() {
+    setValeForm({ ...valeFormVazio, colaboradorId: funcionariosDisponiveis[0]?.id ?? "" });
+    setValeEditandoId(null);
+    setValeModo("novo");
+  }
+  function abrirEditarVale(v: LancamentoVale) {
+    setValeForm({
+      colaboradorId: "", tipo: v.tipo, descricao: v.descricao,
+      valor: Number(v.valor).toFixed(2), status: v.status,
+    });
+    setValeEditandoId(v.id);
+    setValeModo("editar");
+  }
+  async function salvarVale() {
+    if (!valeForm.descricao || !valeForm.valor) return;
+    if (valeModo === "novo" && !valeForm.colaboradorId) return;
+    setSalvandoVale(true);
+    try {
+      const url = valeModo === "novo" ? "/api/vales" : `/api/vales/${valeEditandoId}`;
+      const body = valeModo === "novo"
+        ? { colaboradorId: valeForm.colaboradorId, tipo: valeForm.tipo, descricao: valeForm.descricao, valor: Number(valeForm.valor), registradoPor: nomeOperador }
+        : { tipo: valeForm.tipo, descricao: valeForm.descricao, valor: Number(valeForm.valor), status: valeForm.status };
+      const res = await fetch(url, {
+        method: valeModo === "novo" ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+      setValeModo(null);
+    } catch {
+      alert("Erro ao salvar lançamento. Tente novamente.");
+    } finally {
+      setSalvandoVale(false);
+    }
+  }
+
+  // ── Estado: incluir crédito/consumo (Caixinha) ──────────────────
+  const [caixinhaIncluirModo, setCaixinhaIncluirModo] = useState<"credito" | "consumo" | null>(null);
+  const [novoCreditoTipo, setNovoCreditoTipo] = useState<"INDIVIDUAL" | "COLETIVO">("INDIVIDUAL");
+  const [novoCreditoFuncionarioId, setNovoCreditoFuncionarioId] = useState("");
+  const [novoCreditoEmpresa, setNovoCreditoEmpresa] = useState("");
+  const [novoCreditoValor, setNovoCreditoValor] = useState("");
+  const [novoCreditoDescricao, setNovoCreditoDescricao] = useState("");
+  const [novoConsumoFuncionarioId, setNovoConsumoFuncionarioId] = useState("");
+  const [novoConsumoProductId, setNovoConsumoProductId] = useState("");
+  const [novoConsumoQtd, setNovoConsumoQtd] = useState(1);
+  const [salvandoCaixinhaIncluir, setSalvandoCaixinhaIncluir] = useState(false);
+
+  const empresasDisponiveis = Array.from(new Set(funcionariosDisponiveis.map((f) => f.empresa))).sort();
+
+  function abrirIncluirCaixinha(modo: "credito" | "consumo") {
+    setNovoCreditoTipo("INDIVIDUAL");
+    setNovoCreditoFuncionarioId(funcionariosDisponiveis[0]?.id ?? "");
+    setNovoCreditoEmpresa(empresasDisponiveis[0] ?? "");
+    setNovoCreditoValor("");
+    setNovoCreditoDescricao("");
+    setNovoConsumoFuncionarioId(funcionariosDisponiveis[0]?.id ?? "");
+    setNovoConsumoProductId(produtos[0]?.id ?? "");
+    setNovoConsumoQtd(1);
+    setCaixinhaIncluirModo(modo);
+  }
+  async function salvarNovoCredito() {
+    if (!novoCreditoValor) return;
+    setSalvandoCaixinhaIncluir(true);
+    try {
+      const res = await fetch("/api/parceiros/credito", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: novoCreditoTipo,
+          valor: Number(novoCreditoValor),
+          descricao: novoCreditoDescricao || null,
+          registradoPor: nomeOperador,
+          ...(novoCreditoTipo === "INDIVIDUAL" ? { funcionarioId: novoCreditoFuncionarioId } : { empresa: novoCreditoEmpresa }),
+        }),
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+      setCaixinhaIncluirModo(null);
+    } catch {
+      alert("Erro ao registrar crédito. Tente novamente.");
+    } finally {
+      setSalvandoCaixinhaIncluir(false);
+    }
+  }
+  async function salvarNovoConsumo() {
+    if (!novoConsumoFuncionarioId || !novoConsumoProductId) return;
+    setSalvandoCaixinhaIncluir(true);
+    try {
+      const res = await fetch("/api/parceiros/consumo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          funcionarioId: novoConsumoFuncionarioId,
+          productId: novoConsumoProductId,
+          quantidade: novoConsumoQtd,
+          registradoPor: nomeOperador,
+        }),
+      });
+      const dataRes = await res.json();
+      if (!res.ok) throw new Error(dataRes.error ?? "Erro ao registrar consumo.");
+      mutate();
+      setCaixinhaIncluirModo(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Erro ao registrar consumo. Tente novamente.");
+    } finally {
+      setSalvandoCaixinhaIncluir(false);
+    }
+  }
+
   useEffect(() => {
     fetch("/api/caixas").then((r) => r.json()).then(setCaixasDisponiveis).catch(() => {});
     fetch("/api/produtos").then((r) => r.json()).then((data: Produto[]) => {
       setProdutos(data);
       if (data.length > 0) setEditNovoProductId(data[0].id);
     }).catch(() => {});
+    fetch("/api/mesas").then((r) => r.json()).then((data: { id: string; numero: number }[]) => {
+      setMesasDisponiveis(data.map((m) => ({ id: m.id, numero: m.numero })).sort((a, b) => a.numero - b.numero));
+    }).catch(() => {});
+    fetch("/api/parceiros/funcionarios").then((r) => r.json()).then(setFuncionariosDisponiveis).catch(() => {});
   }, []);
+
+  function abrirNovaTransacao() {
+    setNovaTransacaoMesaId(mesasDisponiveis[0]?.id ?? "");
+    setNovaTransacaoData(toDatetimeLocal(new Date().toISOString()));
+    setNovaTransacao(true);
+  }
+  async function criarTransacaoManual() {
+    if (!novaTransacaoMesaId) return;
+    setCriandoTransacao(true);
+    try {
+      const res = await fetch("/api/financeiro/transacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mesaId: novaTransacaoMesaId, data: fromDatetimeLocal(novaTransacaoData) }),
+      });
+      const pedidoCriado = await res.json();
+      if (!res.ok) throw new Error(pedidoCriado.error ?? "Erro ao criar venda.");
+      setNovaTransacao(false);
+      mutate();
+      abrirEdicao(pedidoCriado);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Erro ao criar venda. Tente novamente.");
+    } finally {
+      setCriandoTransacao(false);
+    }
+  }
 
   // ── Estado: exclusão (compartilhado) ─────────────────────────
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
@@ -359,9 +605,12 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
     const { id, kind } = confirmDelete;
     try {
       let url = "";
-      if (kind === "transacao")  url = `/api/pedidos/${id}`;
-      if (kind === "credito")    url = `/api/parceiros/credito/${id}`;
-      if (kind === "baixa")      url = `/api/parceiros/consumo/${id}`;
+      if (kind === "transacao")     url = `/api/pedidos/${id}`;
+      if (kind === "credito")       url = `/api/parceiros/credito/${id}`;
+      if (kind === "baixa")         url = `/api/parceiros/consumo/${id}`;
+      if (kind === "despesa")       url = `/api/despesas/${id}`;
+      if (kind === "cancelamento")  url = `/api/cancelamentos/${id}`;
+      if (kind === "vale")          url = `/api/vales/${id}`;
       const res = await fetch(url, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
       if (!res.ok) throw new Error();
       mutate();
@@ -521,20 +770,6 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const totalValesAcumulado = totalValesDinheiro + totalValesProduto;
   const temVales = lancamentosVales.length > 0;
 
-  // Vales — resumo por colaborador
-  type ResumoColaborador = { nome: string; setor: string; dinheiro: number; produto: number };
-  const resumoValesMap = new Map<string, ResumoColaborador>();
-  for (const v of lancamentosVales) {
-    const entry = resumoValesMap.get(v.colaborador.nome) ?? {
-      nome: v.colaborador.nome, setor: v.colaborador.setor, dinheiro: 0, produto: 0,
-    };
-    if (v.tipo === "DINHEIRO") entry.dinheiro += Number(v.valor);
-    else entry.produto += Number(v.valor);
-    resumoValesMap.set(v.colaborador.nome, entry);
-  }
-  const resumoValesColabs = Array.from(resumoValesMap.values())
-    .sort((a, b) => (b.dinheiro + b.produto) - (a.dinheiro + a.produto));
-
   const labelPeriodo =
     fromStr === toStr
       ? formatData(`${fromStr}T12:00:00`)
@@ -664,10 +899,20 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       {/* ── Transações ────────────────────────────────────────── */}
       <section className="border-t border-slate-100 pt-6">
         <SectionHeader>
-          <h2 className="text-base font-bold text-slate-800">
-            Transações
-            <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-bold text-slate-800">
+              Transações
+              <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
+            </h2>
+            {isAdmin && (
+              <button
+                onClick={abrirNovaTransacao}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                + Incluir venda
+              </button>
+            )}
+          </div>
         </SectionHeader>
         {pedidosFechados.length === 0 ? (
           <p className="text-sm text-slate-400">Nenhuma venda registrada neste período.</p>
@@ -801,16 +1046,29 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       </section>
 
       {/* ── Despesas ──────────────────────────────────────────── */}
-      {despesas.length > 0 && (
+      {(despesas.length > 0 || isAdmin) && (
         <section className="border-t border-slate-100 pt-6">
           <SectionHeader>
-            <h2 className="text-base font-bold text-orange-700">
-              Despesas
-              <span className="ml-2 inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-600">
-                {despesas.length}
-              </span>
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold text-orange-700">
+                Despesas
+                <span className="ml-2 inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-600">
+                  {despesas.length}
+                </span>
+              </h2>
+              {isAdmin && (
+                <button
+                  onClick={abrirNovaDespesa}
+                  className="rounded-md border border-orange-300 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-50"
+                >
+                  + Nova Despesa
+                </button>
+              )}
+            </div>
           </SectionHeader>
+          {despesas.length === 0 ? (
+            <p className="text-sm text-slate-400">Nenhuma despesa registrada neste período.</p>
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-orange-200">
             <table className="w-full min-w-[420px] text-sm">
               <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-500">
@@ -820,6 +1078,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                   <th className="px-5 py-3.5 text-left">Categoria</th>
                   <th className="px-5 py-3.5 text-left">Registrado por</th>
                   <th className="px-5 py-3.5 text-right">Valor</th>
+                  {isAdmin && <th className="px-5 py-3.5"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-orange-100">
@@ -834,6 +1093,25 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                     </td>
                     <td className="px-5 py-3.5 text-slate-500">{d.registradoPor}</td>
                     <td className="px-5 py-3.5 text-right font-semibold text-orange-700">{moeda(Number(d.valor))}</td>
+                    {isAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => abrirEditarDespesa(d)}
+                            className="text-xs font-medium text-blue-500 hover:text-blue-700"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => pedirConfirmDelete(d.id, "despesa", `${d.descricao} — ${moeda(Number(d.valor))}`)}
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                            title="Excluir despesa"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -841,10 +1119,12 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                 <tr>
                   <td colSpan={4} className="px-5 py-3.5 text-sm font-bold text-orange-700">Total de despesas</td>
                   <td className="px-5 py-3.5 text-right text-base font-bold text-orange-700">{moeda(totalDespesas)}</td>
+                  {isAdmin && <td />}
                 </tr>
               </tfoot>
             </table>
           </div>
+          )}
         </section>
       )}
 
@@ -867,6 +1147,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                   <th className="px-5 py-3.5 text-left">Mesa</th>
                   <th className="px-5 py-3.5 text-left">Motivo</th>
                   <th className="px-5 py-3.5 text-left">Cancelado por</th>
+                  {isAdmin && <th className="px-5 py-3.5"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-red-100">
@@ -876,6 +1157,25 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                     <td className="px-5 py-3.5 font-semibold text-slate-900">Mesa {c.mesaNumero}</td>
                     <td className="px-5 py-3.5 text-slate-500">{c.motivoCancelamento || "—"}</td>
                     <td className="px-5 py-3.5 text-slate-600">{c.canceladoPor}</td>
+                    {isAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => abrirEditarCancelamento(c)}
+                            className="text-xs font-medium text-blue-500 hover:text-blue-700"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => pedirConfirmDelete(c.id, "cancelamento", `Mesa ${c.mesaNumero} — ${formatHora(c.canceladoEm)}`)}
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                            title="Excluir cancelamento"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -885,21 +1185,32 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       )}
 
       {/* ── Vales e Adiantamentos ─────────────────────────────── */}
-      {temVales && (
+      {(temVales || isAdmin) && (
         <section className="border-t border-slate-100 pt-6">
           <SectionHeader>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-base font-bold text-amber-700">
-                Resumo de Vales e Adiantamentos do Período
+                Vales e Adiantamentos
                 <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-600">
                   {lancamentosVales.length}
                 </span>
               </h2>
-              <span className="text-sm text-slate-400">{labelPeriodo}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-400">{labelPeriodo}</span>
+                {isAdmin && (
+                  <button
+                    onClick={abrirNovoVale}
+                    className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50"
+                  >
+                    + Novo Lançamento
+                  </button>
+                )}
+              </div>
             </div>
           </SectionHeader>
 
           {/* Sub-cards de totais */}
+          {temVales && (
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
               <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">Total Adiantamentos (Dinheiro)</span>
@@ -921,64 +1232,110 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
               <span className="text-xs text-slate-400">Dinheiro + Produtos no período</span>
             </div>
           </div>
+          )}
 
-          {/* Tabela de totais por colaborador */}
+          {!temVales ? (
+            <p className="text-sm text-slate-400">Nenhum vale/adiantamento registrado neste período.</p>
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-amber-200">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-amber-50 text-xs font-semibold uppercase tracking-wide text-amber-500">
                 <tr>
+                  <th className="px-5 py-3.5 text-left">Data</th>
                   <th className="px-5 py-3.5 text-left">Colaborador</th>
-                  <th className="px-5 py-3.5 text-left">Setor</th>
-                  <th className="px-5 py-3.5 text-right">Total em Dinheiro (R$)</th>
-                  <th className="px-5 py-3.5 text-right">Total em Produtos (R$)</th>
-                  <th className="px-5 py-3.5 text-right">Subtotal Retido (R$)</th>
+                  <th className="px-5 py-3.5 text-left">Tipo</th>
+                  <th className="px-5 py-3.5 text-left">Descrição</th>
+                  <th className="px-5 py-3.5 text-left">Status</th>
+                  <th className="px-5 py-3.5 text-left">Registrado por</th>
+                  <th className="px-5 py-3.5 text-right">Valor</th>
+                  {isAdmin && <th className="px-5 py-3.5"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-amber-100">
-                {resumoValesColabs.map((colab) => {
-                  const subtotal = colab.dinheiro + colab.produto;
-                  return (
-                    <tr key={colab.nome} className="bg-white hover:bg-amber-50 transition-colors">
-                      <td className="px-5 py-3.5 font-semibold text-slate-900">{colab.nome}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                          {colab.setor}
-                        </span>
+                {lancamentosVales.map((v) => (
+                  <tr key={v.id} className="bg-white hover:bg-amber-50 transition-colors">
+                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{formatDataHora(v.createdAt)}</td>
+                    <td className="px-5 py-3.5 font-medium text-slate-900">{v.colaborador.nome}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${v.tipo === "DINHEIRO" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700"}`}>
+                        {v.tipo === "DINHEIRO" ? "Dinheiro" : "Produto"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-500">{v.descricao}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${v.status === "PAGO" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                        {v.status === "PAGO" ? "Pago" : "Pendente"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-400 text-xs">{v.registradoPor}</td>
+                    <td className="px-5 py-3.5 text-right font-semibold text-amber-700">{moeda(Number(v.valor))}</td>
+                    {isAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => abrirEditarVale(v)}
+                            className="text-xs font-medium text-blue-500 hover:text-blue-700"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => pedirConfirmDelete(v.id, "vale", `${v.colaborador.nome} — ${moeda(Number(v.valor))}`)}
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                            title="Excluir lançamento"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
-                      <td className="px-5 py-3.5 text-right font-medium text-amber-700">
-                        {colab.dinheiro > 0 ? moeda(colab.dinheiro) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-5 py-3.5 text-right font-medium text-sky-700">
-                        {colab.produto > 0 ? moeda(colab.produto) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-5 py-3.5 text-right font-bold text-slate-800">{moeda(subtotal)}</td>
-                    </tr>
-                  );
-                })}
+                    )}
+                  </tr>
+                ))}
               </tbody>
               <tfoot className="border-t-2 border-amber-200 bg-amber-50">
                 <tr>
-                  <td colSpan={2} className="px-5 py-3.5 text-sm font-bold text-amber-700">Total do período</td>
-                  <td className="px-5 py-3.5 text-right text-sm font-bold text-amber-700">{moeda(totalValesDinheiro)}</td>
-                  <td className="px-5 py-3.5 text-right text-sm font-bold text-sky-700">{moeda(totalValesProduto)}</td>
+                  <td colSpan={isAdmin ? 6 : 6} className="px-5 py-3.5 text-sm font-bold text-amber-700">Total acumulado</td>
                   <td className="px-5 py-3.5 text-right text-base font-bold text-slate-800">{moeda(totalValesAcumulado)}</td>
+                  {isAdmin && <td />}
                 </tr>
               </tfoot>
             </table>
           </div>
+          )}
         </section>
       )}
 
       {/* ── Caixinha / Consumo de Funcionários ────────────────── */}
-      {temCaixinha && (
+      {(temCaixinha || isAdmin) && (
         <section className="border-t border-slate-100 pt-6">
           <SectionHeader>
-            <h2 className="text-base font-bold text-violet-700">
-              Caixinha
-              <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold text-violet-700">
+                Caixinha
+                <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
+              </h2>
+              {isAdmin && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => abrirIncluirCaixinha("credito")}
+                    className="rounded-md border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                  >
+                    + Crédito
+                  </button>
+                  <button
+                    onClick={() => abrirIncluirCaixinha("consumo")}
+                    className="rounded-md border border-violet-300 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50"
+                  >
+                    + Consumo
+                  </button>
+                </div>
+              )}
+            </div>
           </SectionHeader>
 
+          {!temCaixinha ? (
+            <p className="text-sm text-slate-400">Nenhum lançamento de caixinha neste período.</p>
+          ) : (
+          <>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
               <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Total Créditos</span>
@@ -1091,10 +1448,379 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
               </tfoot>
             </table>
           </div>
+          </>
+          )}
         </section>
       )}
 
     </main>
+
+    {/* ── Modal: incluir crédito/consumo (Caixinha) ─────────── */}
+    {caixinhaIncluirModo && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setCaixinhaIncluirModo(null)}>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="mb-4 text-lg font-bold text-slate-900">
+            {caixinhaIncluirModo === "credito" ? "Novo Crédito" : "Novo Consumo"}
+          </h3>
+
+          {caixinhaIncluirModo === "credito" ? (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {(["INDIVIDUAL", "COLETIVO"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setNovoCreditoTipo(t)}
+                    className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors ${
+                      novoCreditoTipo === t ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {t === "INDIVIDUAL" ? "Individual" : "Coletivo"}
+                  </button>
+                ))}
+              </div>
+              {novoCreditoTipo === "INDIVIDUAL" ? (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Funcionário</label>
+                  <select
+                    value={novoCreditoFuncionarioId}
+                    onChange={(e) => setNovoCreditoFuncionarioId(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  >
+                    {funcionariosDisponiveis.map((f) => (
+                      <option key={f.id} value={f.id}>{f.nome} ({f.empresa})</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Empresa / Grupo</label>
+                  <select
+                    value={novoCreditoEmpresa}
+                    onChange={(e) => setNovoCreditoEmpresa(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  >
+                    {empresasDisponiveis.map((emp) => (
+                      <option key={emp} value={emp}>{emp}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Valor (R$)</label>
+                <input
+                  type="number" min={0.01} step="0.01" value={novoCreditoValor}
+                  onChange={(e) => setNovoCreditoValor(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Descrição (opcional)</label>
+                <input
+                  type="text" value={novoCreditoDescricao}
+                  onChange={(e) => setNovoCreditoDescricao(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Funcionário</label>
+                <select
+                  value={novoConsumoFuncionarioId}
+                  onChange={(e) => setNovoConsumoFuncionarioId(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                >
+                  {funcionariosDisponiveis.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nome} ({f.empresa})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Produto</label>
+                <select
+                  value={novoConsumoProductId}
+                  onChange={(e) => setNovoConsumoProductId(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                >
+                  {produtos.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome} — {moeda(Number(p.preco))}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Quantidade</label>
+                <input
+                  type="number" min={1} value={novoConsumoQtd}
+                  onChange={(e) => setNovoConsumoQtd(Math.max(1, Number(e.target.value)))}
+                  className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => setCaixinhaIncluirModo(null)} className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button
+              onClick={caixinhaIncluirModo === "credito" ? salvarNovoCredito : salvarNovoConsumo}
+              disabled={
+                salvandoCaixinhaIncluir ||
+                (caixinhaIncluirModo === "credito"
+                  ? !novoCreditoValor || (novoCreditoTipo === "INDIVIDUAL" ? !novoCreditoFuncionarioId : !novoCreditoEmpresa)
+                  : !novoConsumoFuncionarioId || !novoConsumoProductId)
+              }
+              className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {salvandoCaixinhaIncluir ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal: novo/editar vale ────────────────────────────── */}
+    {valeModo && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setValeModo(null)}>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="mb-4 text-lg font-bold text-slate-900">
+            {valeModo === "novo" ? "Novo Vale / Adiantamento" : "Editar Vale / Adiantamento"}
+          </h3>
+          <div className="space-y-3">
+            {valeModo === "novo" && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Colaborador</label>
+                <select
+                  value={valeForm.colaboradorId}
+                  onChange={(e) => setValeForm({ ...valeForm, colaboradorId: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  {funcionariosDisponiveis.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nome}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex gap-2">
+              {(["DINHEIRO", "PRODUTO"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setValeForm({ ...valeForm, tipo: t })}
+                  className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors ${
+                    valeForm.tipo === t ? "border-amber-600 bg-amber-600 text-white" : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {t === "DINHEIRO" ? "Dinheiro" : "Produto"}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Descrição</label>
+              <input
+                type="text" value={valeForm.descricao}
+                onChange={(e) => setValeForm({ ...valeForm, descricao: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Valor (R$)</label>
+              <input
+                type="number" min={0.01} step="0.01" value={valeForm.valor}
+                onChange={(e) => setValeForm({ ...valeForm, valor: e.target.value })}
+                placeholder="0,00"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            {valeModo === "editar" && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Status</label>
+                <select
+                  value={valeForm.status}
+                  onChange={(e) => setValeForm({ ...valeForm, status: e.target.value as "PENDENTE" | "PAGO" })}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="PENDENTE">Pendente</option>
+                  <option value="PAGO">Pago</option>
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => setValeModo(null)} className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button
+              onClick={salvarVale}
+              disabled={salvandoVale || !valeForm.descricao || !valeForm.valor || (valeModo === "novo" && !valeForm.colaboradorId)}
+              className="flex-1 rounded-lg bg-amber-600 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              {salvandoVale ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal: editar cancelamento ─────────────────────────── */}
+    {cancelamentoEditando && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setCancelamentoEditando(null)}>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="mb-4 text-lg font-bold text-slate-900">Editar Cancelamento</h3>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Mesa</label>
+                <input
+                  type="number" min={1} value={cancelForm.mesaNumero}
+                  onChange={(e) => setCancelForm({ ...cancelForm, mesaNumero: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Data / Hora</label>
+                <input
+                  type="datetime-local" value={cancelForm.canceladoEm}
+                  onChange={(e) => setCancelForm({ ...cancelForm, canceladoEm: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Motivo</label>
+              <input
+                type="text" value={cancelForm.motivoCancelamento}
+                onChange={(e) => setCancelForm({ ...cancelForm, motivoCancelamento: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Cancelado por</label>
+              <input
+                type="text" value={cancelForm.canceladoPor}
+                onChange={(e) => setCancelForm({ ...cancelForm, canceladoPor: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => setCancelamentoEditando(null)} className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button
+              onClick={salvarCancelamento}
+              disabled={salvandoCancelamento || !cancelForm.mesaNumero || !cancelForm.canceladoPor}
+              className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {salvandoCancelamento ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal: nova/editar despesa ─────────────────────────── */}
+    {despesaModo && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setDespesaModo(null)}>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="mb-4 text-lg font-bold text-slate-900">
+            {despesaModo === "novo" ? "Nova Despesa" : "Editar Despesa"}
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Descrição</label>
+              <input
+                type="text" value={despesaForm.descricao}
+                onChange={(e) => setDespesaForm({ ...despesaForm, descricao: e.target.value })}
+                placeholder="Ex: Compra de carnes"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Valor (R$)</label>
+                <input
+                  type="number" min={0.01} step="0.01" value={despesaForm.valor}
+                  onChange={(e) => setDespesaForm({ ...despesaForm, valor: e.target.value })}
+                  placeholder="0,00"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Data</label>
+                <input
+                  type="date" value={despesaForm.data}
+                  onChange={(e) => setDespesaForm({ ...despesaForm, data: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Categoria</label>
+              <select
+                value={despesaForm.categoria}
+                onChange={(e) => setDespesaForm({ ...despesaForm, categoria: e.target.value })}
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                {CATEGORIAS_DESPESA.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => setDespesaModo(null)} className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button
+              onClick={salvarDespesa}
+              disabled={salvandoDespesa || !despesaForm.descricao || !despesaForm.valor || !despesaForm.data}
+              className="flex-1 rounded-lg bg-orange-600 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+            >
+              {salvandoDespesa ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal: incluir venda manual ───────────────────────── */}
+    {novaTransacao && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setNovaTransacao(false)}>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="mb-4 text-lg font-bold text-slate-900">Incluir Venda</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Mesa</label>
+              <select
+                value={novaTransacaoMesaId}
+                onChange={(e) => setNovaTransacaoMesaId(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                {mesasDisponiveis.map((m) => (
+                  <option key={m.id} value={m.id}>Mesa {m.numero}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Data / Hora</label>
+              <input
+                type="datetime-local"
+                value={novaTransacaoData}
+                onChange={(e) => setNovaTransacaoData(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+            <p className="text-xs text-slate-400">
+              Cria a venda vazia e abre a edição pra você adicionar itens e forma de pagamento.
+            </p>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => setNovaTransacao(false)} className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button
+              onClick={criarTransacaoManual}
+              disabled={criandoTransacao || !novaTransacaoMesaId}
+              className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {criandoTransacao ? "Criando..." : "Continuar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ── Modal: edição de transação ────────────────────────── */}
     {editando && (
