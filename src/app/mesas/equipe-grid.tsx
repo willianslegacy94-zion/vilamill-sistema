@@ -6,8 +6,6 @@ import { useSession } from "next-auth/react";
 type ProdutoAPI = { id: string; nome: string; preco: string; categoria: string };
 type FuncionarioAPI = { id: string; nome: string; empresa: string; setor: string };
 
-const EMPRESA_EQUIPE = "Equipe Villa Mill";
-
 function moeda(v: string | number) {
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -29,9 +27,11 @@ export default function EquipeGrid() {
   const [carregandoPessoas, setCarregandoPessoas] = useState(true);
 
   useEffect(() => {
+    // Todo mundo cadastrado em Parceiros (qualquer empresa) e em Caixas
+    // (sincronizado automaticamente como FuncionarioExterno) aparece aqui.
     fetch("/api/parceiros/funcionarios")
       .then((r) => r.json())
-      .then((data: FuncionarioAPI[]) => setPessoas(data.filter((f) => f.empresa === EMPRESA_EQUIPE)))
+      .then((data: FuncionarioAPI[]) => setPessoas(data))
       .catch(console.error)
       .finally(() => setCarregandoPessoas(false));
     fetch("/api/produtos")
@@ -104,9 +104,9 @@ export default function EquipeGrid() {
     <>
       {!carregandoPessoas && pessoas.length === 0 && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Nenhuma pessoa cadastrada na Equipe Villa Mill. Cadastre em{" "}
+          Nenhuma pessoa cadastrada em{" "}
           <a href="/parceiros" className="underline font-semibold">Parceiros</a>{" "}
-          (empresa &quot;{EMPRESA_EQUIPE}&quot;) ou rode o script de seed.
+          ou <a href="/admin/caixas" className="underline font-semibold">Caixas</a> ainda.
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
