@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import CaixinhaModal from "@/components/caixinha-modal";
+// Caixinha Lava-Rápido temporariamente oculta do frontend — ver uso mais abaixo.
+// import { useState } from "react";
+// import CaixinhaModal from "@/components/caixinha-modal";
 
 type Modulo = {
   href: string;
@@ -18,7 +19,7 @@ type Props = {
 };
 
 export default function HomeModules({ modulos, emailOperador }: Props) {
-  const [openCaixinha, setOpenCaixinha] = useState(false);
+  // const [openCaixinha, setOpenCaixinha] = useState(false);
 
   return (
     <>
@@ -38,6 +39,7 @@ export default function HomeModules({ modulos, emailOperador }: Props) {
         ))}
 
         {/* Card especial — abre modal, não navega */}
+        {/*
         <button
           type="button"
           onClick={() => setOpenCaixinha(true)}
@@ -49,14 +51,17 @@ export default function HomeModules({ modulos, emailOperador }: Props) {
           <h2 className="font-bold text-slate-900 group-hover:text-violet-600 transition-colors">Caixinha Lava-Rápido</h2>
           <p className="mt-1 text-sm text-slate-500">Registre caixinha e consumo dos funcionários parceiros.</p>
         </button>
+        */}
       </div>
 
+      {/*
       {openCaixinha && (
         <CaixinhaModal
           emailOperador={emailOperador}
           onClose={() => setOpenCaixinha(false)}
         />
       )}
+      */}
     </>
   );
 }
