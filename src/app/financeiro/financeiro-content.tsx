@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import DateRangeFilter from "./date-selector";
-import { useFinanceiro } from "@/hooks/useAppData";
+import { useFinanceiro, useConsumoFuncionarios } from "@/hooks/useAppData";
 
 function toDatetimeLocal(isoStr: string | null): string {
   if (!isoStr) return "";
@@ -82,11 +82,15 @@ type CreditoCaixinha = {
   descricao: string | null; registradoPor: string; registradoEm: string;
 };
 type ConsumoCaixinha = {
-  id: string; funcionario: { nome: string; empresa: string };
+  id: string; funcionario: { id: string; nome: string; empresa: string };
   product: { nome: string };
   quantidade: string | number; precoUnit: string | number; subtotal: string | number;
   registradoPor: string; registradoEm: string;
   liquidado: boolean; liquidadoEm: string | null;
+};
+type ResumoConsumoFuncionario = {
+  funcionarioId: string; nome: string; empresa: string;
+  totalConsumido: number; quantidadeItens: number;
 };
 type LancamentoVale = {
   id: string; tipo: "DINHEIRO" | "PRODUTO";
@@ -445,6 +449,8 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const [salvandoCaixinha, setSalvandoCaixinha] = useState(false);
 
   const { data, isLoading, isValidating, mutate } = useFinanceiro(fromStr, toStr) as any;
+  const { resumo: resumoConsumoFuncionarios } = useConsumoFuncionarios(fromStr, toStr) as { resumo: ResumoConsumoFuncionario[] };
+  const [detalheFuncionario, setDetalheFuncionario] = useState<{ id: string; nome: string } | null>(null);
 
   // ── Edição transação ─────────────────────────────────────────
   function abrirEdicao(p: Pedido) {
@@ -786,6 +792,15 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const totalBaixasCaixinha   = consumosCaixinha.reduce((s, c) => s + Number(c.subtotal), 0);
   const saldoCaixinha         = totalCreditosCaixinha - totalBaixasCaixinha;
   const temCaixinha           = extratoCaixinha.length > 0;
+
+  // Consumo de funcionários — resumo agrupado (vem da rota /api/financeiro/consumo-funcionarios)
+  const totalConsumoFuncionarios = resumoConsumoFuncionarios.reduce((s, r) => s + r.totalConsumido, 0);
+  const temConsumoFuncionarios   = resumoConsumoFuncionarios.length > 0;
+  const itensDetalheFuncionario  = detalheFuncionario
+    ? consumosCaixinha
+        .filter((c) => c.funcionario.id === detalheFuncionario.id)
+        .sort((a, b) => new Date(b.registradoEm).getTime() - new Date(a.registradoEm).getTime())
+    : [];
 
   // Vales — totais do período
   const totalValesDinheiro = lancamentosVales
@@ -1560,6 +1575,62 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
         </section>
       )}
 
+      {/* ── Resumo de Consumo de Funcionários ──────────────────── */}
+      {(temConsumoFuncionarios || isAdmin) && (
+        <section className="border-t border-slate-100 pt-6">
+          <SectionHeader>
+            <h2 className="text-base font-bold text-rose-700">
+              Consumo de Funcionários
+              <span className="ml-2 text-sm font-normal text-slate-400">— {labelPeriodo}</span>
+              {resumoConsumoFuncionarios.length > 0 && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">
+                  {resumoConsumoFuncionarios.length}
+                </span>
+              )}
+            </h2>
+          </SectionHeader>
+
+          {!temConsumoFuncionarios ? (
+            <p className="text-sm text-slate-400">Nenhum consumo de funcionário registrado neste período.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-rose-200">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead className="bg-rose-50 text-xs font-semibold uppercase tracking-wide text-rose-600">
+                  <tr>
+                    <th className="px-5 py-3.5 text-left">Funcionário</th>
+                    <th className="px-5 py-3.5 text-right">Total Consumido (R$)</th>
+                    <th className="px-5 py-3.5 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-rose-100">
+                  {resumoConsumoFuncionarios.map((r) => (
+                    <tr key={r.funcionarioId} className="bg-white hover:bg-rose-50 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-slate-900">{r.nome}</td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-rose-700">{moeda(r.totalConsumido)}</td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          onClick={() => setDetalheFuncionario({ id: r.funcionarioId, nome: r.nome })}
+                          className="rounded-md border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                        >
+                          Ver Detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-rose-200 bg-rose-50">
+                  <tr>
+                    <td className="px-5 py-3.5 text-sm font-bold text-rose-700">Total acumulado</td>
+                    <td className="px-5 py-3.5 text-right text-base font-bold text-slate-800">{moeda(totalConsumoFuncionarios)}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* ── Lavagens ──────────────────────────────────────────── */}
       {(temLavagem || isAdmin) && (
         <section className="border-t border-slate-100 pt-6">
@@ -2283,6 +2354,59 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
               className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
             >
               {salvandoCaixinha ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal: extrato detalhado do consumo de funcionário ── */}
+    {detalheFuncionario && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setDetalheFuncionario(null)}>
+        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900">Extrato — {detalheFuncionario.nome}</h3>
+            <button onClick={() => setDetalheFuncionario(null)} className="p-1 text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          </div>
+
+          {itensDetalheFuncionario.length === 0 ? (
+            <p className="text-sm text-slate-400">Nenhum item registrado neste período.</p>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-rose-200">
+              <table className="w-full text-sm">
+                <thead className="bg-rose-50 text-xs font-semibold uppercase tracking-wide text-rose-600">
+                  <tr>
+                    <th className="px-4 py-2.5 text-left">Data / Hora</th>
+                    <th className="px-4 py-2.5 text-left">Item</th>
+                    <th className="px-4 py-2.5 text-right">Qtd.</th>
+                    <th className="px-4 py-2.5 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-rose-100">
+                  {itensDetalheFuncionario.map((item) => (
+                    <tr key={item.id} className="bg-white">
+                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{formatDataHora(item.registradoEm)}</td>
+                      <td className="px-4 py-2.5 text-slate-800">{item.product.nome}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{Number(item.quantidade) % 1 === 0 ? Number(item.quantidade).toFixed(0) : Number(item.quantidade).toFixed(1)}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-rose-700">{moeda(Number(item.subtotal))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-rose-200 bg-rose-50">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-2.5 text-sm font-bold text-rose-700">Total</td>
+                    <td className="px-4 py-2.5 text-right text-base font-bold text-slate-800">
+                      {moeda(itensDetalheFuncionario.reduce((s, i) => s + Number(i.subtotal), 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <button onClick={() => setDetalheFuncionario(null)} className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Fechar
             </button>
           </div>
         </div>

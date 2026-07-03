@@ -23,8 +23,14 @@ export default function EquipeGrid() {
   const [quantidade, setQuantidade] = useState(1);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
-  const [ok, setOk] = useState("");
+  const [toast, setToast] = useState("");
   const [carregandoPessoas, setCarregandoPessoas] = useState(true);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 2800);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     // Todo mundo cadastrado em Parceiros (qualquer empresa) e em Caixas
@@ -65,7 +71,6 @@ export default function EquipeGrid() {
     setProdutoId("");
     setQuantidade(1);
     setErro("");
-    setOk("");
   }
 
   function fecharModal() {
@@ -76,7 +81,6 @@ export default function EquipeGrid() {
     if (!pessoaId || !produtoId) return;
     setSalvando(true);
     setErro("");
-    setOk("");
     try {
       const res = await fetch("/api/parceiros/consumo", {
         method: "POST",
@@ -90,9 +94,11 @@ export default function EquipeGrid() {
       });
       const data = await res.json();
       if (!res.ok) { setErro(data.error ?? "Erro ao registrar consumo."); return; }
-      setOk(`${quantidade}× ${produtoSelecionado?.nome} registrado para ${pessoaSelecionada?.nome}.`);
+      setToast(`${quantidade}× ${produtoSelecionado?.nome} registrado para ${pessoaSelecionada?.nome}.`);
       setProdutoId("");
       setQuantidade(1);
+      setBusca("");
+      setCategoriaAtiva(null);
     } catch {
       setErro("Erro de conexão. Tente novamente.");
     } finally {
@@ -190,7 +196,7 @@ export default function EquipeGrid() {
                     produtosFiltrados.map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => { setProdutoId(p.id); setErro(""); setOk(""); }}
+                        onClick={() => { setProdutoId(p.id); setErro(""); }}
                         className={`w-full flex items-center justify-between px-3 py-3 text-left text-sm transition-colors active:bg-slate-100 hover:bg-slate-50 ${
                           produtoId === p.id ? "bg-slate-100 font-semibold" : ""
                         }`}
@@ -230,13 +236,17 @@ export default function EquipeGrid() {
                 )}
 
                 {erro && <p className="text-xs font-semibold text-red-600">{erro}</p>}
-                {ok && (
-                  <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                    {ok}
-                  </div>
-                )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed inset-x-0 bottom-6 z-[100] flex justify-center px-4">
+          <div className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg">
+            <span>✓</span>
+            <span>{toast}</span>
           </div>
         </div>
       )}

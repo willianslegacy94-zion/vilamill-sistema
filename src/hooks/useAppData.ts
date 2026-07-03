@@ -34,3 +34,12 @@ export function useFinanceiro(from: string, to: string) {
   );
   return { data: data ?? null, isLoading, isValidating, error, mutate };
 }
+
+export function useConsumoFuncionarios(from: string, to: string) {
+  const { data, error, isLoading, mutate } = useSWR(
+    `/api/financeiro/consumo-funcionarios?from=${from}&to=${to}`,
+    fetcher,
+    SWR_CONFIG
+  );
+  return { resumo: data?.resumo ?? [], isLoading, error, mutate };
+}
