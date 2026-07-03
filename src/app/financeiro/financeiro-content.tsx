@@ -34,10 +34,6 @@ function formatDataHora(d: string) {
 function hojeStr() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 }
-function primeiroDiaMes() {
-  const [y, m] = hojeStr().split("-");
-  return `${y}-${m}-01`;
-}
 
 type PagEntry = { forma: string; valor: number };
 type Item = {
@@ -165,7 +161,7 @@ function FinanceiroSkeleton() {
 
 export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const params = useSearchParams();
-  const fromStr = params.get("from") ?? primeiroDiaMes();
+  const fromStr = params.get("from") ?? hojeStr();
   const toStr   = params.get("to")   ?? hojeStr();
   const { data: session } = useSession();
   const nomeOperador = session?.user?.email ?? session?.user?.name ?? "sistema";
@@ -449,7 +445,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
   const [salvandoCaixinha, setSalvandoCaixinha] = useState(false);
 
   const { data, isLoading, isValidating, mutate } = useFinanceiro(fromStr, toStr) as any;
-  const { resumo: resumoConsumoFuncionarios } = useConsumoFuncionarios(fromStr, toStr) as { resumo: ResumoConsumoFuncionario[] };
+  const { resumo: resumoConsumoFuncionarios, mutate: mutateResumoConsumo } = useConsumoFuncionarios(fromStr, toStr) as { resumo: ResumoConsumoFuncionario[]; mutate: () => void };
   const [detalheFuncionario, setDetalheFuncionario] = useState<{ id: string; nome: string } | null>(null);
 
   // ── Edição transação ─────────────────────────────────────────
@@ -624,6 +620,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       const res = await fetch(url, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
       if (!res.ok) throw new Error();
       mutate();
+      mutateResumoConsumo();
       setConfirmDelete(null);
     } catch {
       alert("Erro ao excluir. Tente novamente.");
@@ -644,6 +641,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       });
       if (!res.ok) throw new Error();
       mutate();
+      mutateResumoConsumo();
     } catch {
       alert("Erro ao dar baixa. Tente novamente.");
     } finally {
@@ -691,6 +689,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
       });
       if (!res.ok) throw new Error();
       mutate();
+      mutateResumoConsumo();
       setEditCaixinha(null);
     } catch {
       alert("Erro ao salvar. Tente novamente.");
@@ -2363,7 +2362,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
     {/* ── Modal: extrato detalhado do consumo de funcionário ── */}
     {detalheFuncionario && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setDetalheFuncionario(null)}>
-        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900">Extrato — {detalheFuncionario.nome}</h3>
             <button onClick={() => setDetalheFuncionario(null)} className="p-1 text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
@@ -2372,25 +2371,71 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
           {itensDetalheFuncionario.length === 0 ? (
             <p className="text-sm text-slate-400">Nenhum item registrado neste período.</p>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-rose-200">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-xl border border-rose-200">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-rose-50 text-xs font-semibold uppercase tracking-wide text-rose-600">
                   <tr>
                     <th className="px-4 py-2.5 text-left">Data / Hora</th>
                     <th className="px-4 py-2.5 text-left">Item</th>
                     <th className="px-4 py-2.5 text-right">Qtd.</th>
                     <th className="px-4 py-2.5 text-right">Subtotal</th>
+                    {isAdmin && <th className="px-4 py-2.5"></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rose-100">
-                  {itensDetalheFuncionario.map((item) => (
-                    <tr key={item.id} className="bg-white">
-                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{formatDataHora(item.registradoEm)}</td>
-                      <td className="px-4 py-2.5 text-slate-800">{item.product.nome}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{Number(item.quantidade) % 1 === 0 ? Number(item.quantidade).toFixed(0) : Number(item.quantidade).toFixed(1)}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-rose-700">{moeda(Number(item.subtotal))}</td>
-                    </tr>
-                  ))}
+                  {itensDetalheFuncionario.map((item) => {
+                    const qtdLabel = Number(item.quantidade) % 1 === 0 ? Number(item.quantidade).toFixed(0) : Number(item.quantidade).toFixed(1);
+                    const entrada: EntradaExtrato = {
+                      id: item.id, kind: "baixa", data: item.registradoEm,
+                      destino: item.funcionario.nome,
+                      descricao: `${qtdLabel}× ${item.product.nome}`,
+                      registradoPor: item.registradoPor,
+                      valor: Number(item.subtotal),
+                      liquidado: item.liquidado,
+                      grupo: item.funcionario.empresa,
+                    };
+                    return (
+                      <tr key={item.id} className="bg-white">
+                        <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{formatDataHora(item.registradoEm)}</td>
+                        <td className="px-4 py-2.5 text-slate-800">{item.product.nome}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-500">{qtdLabel}</td>
+                        <td className="px-4 py-2.5 text-right font-semibold text-rose-700">{moeda(Number(item.subtotal))}</td>
+                        {isAdmin && (
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-3">
+                              {item.liquidado ? (
+                                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                  Pago
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => marcarLiquidado(item.id)}
+                                  disabled={liquidando === item.id}
+                                  className="text-xs font-medium text-emerald-600 hover:text-emerald-800 disabled:opacity-40"
+                                  title="Marcar consumo como pago"
+                                >
+                                  {liquidando === item.id ? "Salvando..." : "Dar baixa"}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => abrirEdicaoCaixinha(entrada, creditosCaixinha, consumosCaixinha)}
+                                className="text-xs font-medium text-blue-500 hover:text-blue-700"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => pedirConfirmDelete(item.id, "baixa", `${item.funcionario.nome} — ${qtdLabel}× ${item.product.nome} — ${moeda(Number(item.subtotal))}`)}
+                                className="text-red-400 hover:text-red-600 transition-colors"
+                                title="Excluir registro"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot className="border-t-2 border-rose-200 bg-rose-50">
                   <tr>
@@ -2398,6 +2443,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
                     <td className="px-4 py-2.5 text-right text-base font-bold text-slate-800">
                       {moeda(itensDetalheFuncionario.reduce((s, i) => s + Number(i.subtotal), 0))}
                     </td>
+                    {isAdmin && <td />}
                   </tr>
                 </tfoot>
               </table>

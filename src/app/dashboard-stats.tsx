@@ -1,6 +1,5 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
 import { useDashboard } from "@/hooks/useAppData";
 
 type Props = { isAdmin: boolean; isTrainee: boolean };
@@ -31,7 +30,7 @@ export default function DashboardStats({ isAdmin, isTrainee }: Props) {
   // During 3-second revalidations stats keeps its previous value — no flicker.
   if (!stats) return <StatSkeleton />;
 
-  const { mesasAbertas, insumoCriticos, vendasHoje } = stats as {
+  const { mesasAbertas, vendasHoje } = stats as {
     mesasAbertas: number;
     insumoCriticos: { id: string; nome: string }[];
     vendasHoje: { total: number; count: number };
@@ -74,20 +73,6 @@ export default function DashboardStats({ isAdmin, isTrainee }: Props) {
           </p>
         </div>
       </div>
-
-      {insumoCriticos.length > 0 && (
-        <div className="mb-8 flex flex-col gap-2">
-          {insumoCriticos.map((i) => (
-            <div
-              key={i.id}
-              className="flex items-center gap-3 rounded-xl border border-red-300 bg-red-50 px-5 py-3"
-            >
-              <TriangleAlert className="h-5 w-5 shrink-0 text-red-600" />
-              <p className="font-semibold text-red-700">ESTOQUE CRÍTICO: {i.nome}</p>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }

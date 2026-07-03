@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Home, LayoutGrid, BookOpen, Package, TrendingUp, Receipt, LogOut } from "lucide-react";
+import NotificationsBell from "@/components/notifications-bell";
 
 const allLinks = [
   { href: "/",           label: "Início",     icon: Home,        roles: ["ADMIN", "CAIXA"] },
@@ -67,6 +68,7 @@ export default function Navbar() {
         {/* Usuário + logout */}
         {session && (
           <div className="flex items-center gap-2 border-l border-white/10 pl-3">
+            <NotificationsBell />
             {role === "ADMIN" ? (
               <Link
                 href="/alterar-senha"

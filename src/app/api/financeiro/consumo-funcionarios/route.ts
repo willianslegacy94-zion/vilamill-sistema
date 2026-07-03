@@ -11,10 +11,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
 
   const hojeStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  const [y, m] = hojeStr.split("-");
-  const defaultFrom = `${y}-${m}-01`;
 
-  const fromStr = searchParams.get("from") ?? defaultFrom;
+  const fromStr = searchParams.get("from") ?? hojeStr;
   const toStr = searchParams.get("to") ?? hojeStr;
 
   const inicioPeriodo = intervaloSP(fromStr).inicio;
