@@ -12,8 +12,22 @@ type KdsItem = {
   order: { createdAt: string; table: { numero: number } };
 };
 
+type MesaGroup = {
+  orderId: string;
+  mesa: number;
+  createdAt: string;
+  items: {
+    id: string;
+    status: string;
+    observacoes: string | null;
+    prontoEm: string | null;
+    createdAt: string;
+    product: { nome: string; categoria: string };
+  }[];
+};
+
 type ApiResponse = {
-  pendentes: KdsItem[];
+  mesas: MesaGroup[];
   concluidos: KdsItem[];
 };
 
@@ -54,8 +68,12 @@ export default function KdsBoard() {
   const [aba, setAba] = useState<Aba>("pendentes");
   const [despachando, setDespachando] = useState<Set<string>>(new Set());
 
-  const pendentes  = data?.pendentes  ?? [];
+  const mesas      = data?.mesas      ?? [];
   const concluidos = data?.concluidos ?? [];
+  const totalPendentes = mesas.reduce(
+    (acc, m) => acc + m.items.filter((i) => i.status === "PENDENTE").length,
+    0
+  );
 
   async function marcarPronto(itemId: string) {
     setDespachando((prev) => new Set(prev).add(itemId));
@@ -93,9 +111,9 @@ export default function KdsBoard() {
           }`}
         >
           Pendentes
-          {pendentes.length > 0 && (
+          {totalPendentes > 0 && (
             <span className={`rounded-full px-2 py-0.5 text-xs font-black ${aba === "pendentes" ? "bg-zinc-900/30 text-zinc-900" : "bg-zinc-700 text-zinc-300"}`}>
-              {pendentes.length}
+              {totalPendentes}
             </span>
           )}
         </button>
@@ -119,7 +137,7 @@ export default function KdsBoard() {
       {/* Aba Pendentes */}
       {aba === "pendentes" && (
         <>
-          {pendentes.length === 0 ? (
+          {mesas.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 py-16">
               <span className="text-5xl">✅</span>
               <p className="text-lg font-semibold text-zinc-400">Fila limpa</p>
@@ -134,35 +152,66 @@ export default function KdsBoard() {
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-red-500 bg-red-950/30" />+15 min</span>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {pendentes.map((item) => {
-                  const ocupado = despachando.has(item.id);
+                {mesas.map((mesa) => {
+                  const itensPendentes = mesa.items.filter((i) => i.status === "PENDENTE");
+                  const itensProntos   = mesa.items.filter((i) => i.status !== "PENDENTE");
+                  const maisAntigo = itensPendentes.reduce(
+                    (min, i) => (i.createdAt < min ? i.createdAt : min),
+                    itensPendentes[0].createdAt
+                  );
                   return (
                     <div
-                      key={item.id}
-                      className={`flex flex-col rounded-2xl border-2 bg-zinc-900 p-5 shadow-lg transition-all ${urgencyClass(item.order.createdAt)}`}
+                      key={mesa.orderId}
+                      className={`flex flex-col rounded-2xl border-2 bg-zinc-900 p-5 shadow-lg transition-all ${urgencyClass(maisAntigo)}`}
                     >
                       <div className="mb-3 flex items-start justify-between">
-                        <MesaBadge numero={item.order.table.numero} />
+                        <MesaBadge numero={mesa.mesa} />
                         <div className="text-right">
-                          <span className="block text-xs font-semibold text-zinc-400">{tempoDecorrido(item.order.createdAt)}</span>
-                          <span className="block text-xs text-zinc-600">{item.product.categoria}</span>
+                          <span className="block text-xs font-semibold text-zinc-400">{tempoDecorrido(maisAntigo)}</span>
+                          <span className="block text-xs text-zinc-600">{itensPendentes.length} a fazer</span>
                         </div>
                       </div>
-                      <p className="mb-2 flex-1 text-2xl font-black leading-tight text-white">
-                        {item.product.nome}
-                      </p>
-                      {item.observacoes && (
-                        <div className="mb-4 rounded-lg bg-zinc-800 px-3 py-2">
-                          <p className="text-sm font-semibold text-amber-400">{item.observacoes}</p>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => marcarPronto(item.id)}
-                        disabled={ocupado}
-                        className="mt-auto w-full rounded-xl bg-emerald-500 py-4 text-base font-black tracking-widest text-zinc-900 transition hover:bg-emerald-400 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {ocupado ? "..." : "✓ PRONTO"}
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        {[...itensPendentes, ...itensProntos].map((item) => {
+                          const feito   = item.status !== "PENDENTE";
+                          const ocupado = despachando.has(item.id);
+                          return (
+                            <div
+                              key={item.id}
+                              className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 transition-colors ${
+                                feito ? "bg-zinc-900" : "bg-zinc-800"
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`truncate font-black leading-tight ${
+                                    feito ? "text-base text-zinc-600 line-through" : "text-xl text-white"
+                                  }`}
+                                >
+                                  {item.product.nome}
+                                </p>
+                                {!feito && (
+                                  <p className="text-[11px] text-zinc-500">{item.product.categoria}</p>
+                                )}
+                                {!feito && item.observacoes && (
+                                  <p className="mt-1 text-xs font-semibold text-amber-400">{item.observacoes}</p>
+                                )}
+                              </div>
+                              {feito ? (
+                                <span className="shrink-0 text-lg text-emerald-700">✓</span>
+                              ) : (
+                                <button
+                                  onClick={() => marcarPronto(item.id)}
+                                  disabled={ocupado}
+                                  className="shrink-0 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-black tracking-widest text-zinc-900 transition hover:bg-emerald-400 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                  {ocupado ? "..." : "✓ PRONTO"}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
