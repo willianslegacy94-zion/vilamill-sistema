@@ -184,8 +184,8 @@ export default function KdsBoard() {
                             >
                               <div className="min-w-0 flex-1">
                                 <p
-                                  className={`truncate font-black leading-tight ${
-                                    feito ? "text-base text-zinc-600 line-through" : "text-xl text-white"
+                                  className={`break-words leading-tight ${
+                                    feito ? "text-base font-bold text-zinc-600 line-through" : "text-lg font-black text-white"
                                   }`}
                                 >
                                   {item.product.nome}
@@ -239,9 +239,9 @@ export default function KdsBoard() {
                 >
                   <MesaBadge numero={item.order.table.numero} muted />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-bold text-zinc-400">{item.product.nome}</p>
+                    <p className="break-words text-sm font-bold text-zinc-400">{item.product.nome}</p>
                     {item.observacoes && (
-                      <p className="truncate text-xs text-zinc-600">{item.observacoes}</p>
+                      <p className="break-words text-xs text-zinc-600">{item.observacoes}</p>
                     )}
                   </div>
                   <div className="shrink-0 text-right">
