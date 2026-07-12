@@ -118,10 +118,11 @@ const PAGAMENTOS_OPTIONS = [
   { valor: "DEBITO",   label: "Débito" },
   { valor: "PIX",      label: "Pix" },
   { valor: "VOUCHER",  label: "Voucher VR/VA" },
+  { valor: "NOTA",     label: "Nota" },
 ];
 const pagLabel: Record<string, string> = {
   DINHEIRO: "Dinheiro", CREDITO: "Crédito", DEBITO: "Débito",
-  PIX: "Pix", VOUCHER: "Voucher VR/VA", CARTAO: "Cartão",
+  PIX: "Pix", VOUCHER: "Voucher VR/VA", CARTAO: "Cartão", NOTA: "Nota",
 };
 const pagColor: Record<string, string> = {
   DINHEIRO: "bg-green-100 text-green-700",
@@ -130,6 +131,7 @@ const pagColor: Record<string, string> = {
   PIX:      "bg-purple-100 text-purple-700",
   VOUCHER:  "bg-amber-100 text-amber-700",
   CARTAO:   "bg-blue-100 text-blue-600",
+  NOTA:     "bg-rose-100 text-rose-700",
 };
 
 function SectionHeader({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -762,6 +764,7 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
     PIX:      somaForma("PIX"),
     VOUCHER:  somaForma("VOUCHER"),
     CARTAO:   somaForma("CARTAO"),
+    NOTA:     somaForma("NOTA"),
   };
 
   // Caixinha — extrato unificado
@@ -914,8 +917,8 @@ export default function FinanceiroContent({ isAdmin }: { isAdmin: boolean }) {
 
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Receita por forma de pagamento</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {(["DINHEIRO", "CREDITO", "DEBITO", "PIX", "VOUCHER"] as const).map((forma) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {(["DINHEIRO", "CREDITO", "DEBITO", "PIX", "VOUCHER", "NOTA"] as const).map((forma) => (
               <div key={forma} className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-5 py-4">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{pagLabel[forma]}</span>
                 <span className={`text-lg font-bold ${porForma[forma] > 0 ? "text-slate-900" : "text-slate-300"}`}>

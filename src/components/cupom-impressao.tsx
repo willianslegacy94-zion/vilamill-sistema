@@ -24,6 +24,7 @@ const FORMA_LABEL: Record<string, string> = {
   DEBITO: "CARTAO DEBITO",
   PIX: "PIX",
   VOUCHER: "VOUCHER VR/VA",
+  NOTA: "NOTA",
 };
 
 function moedaR(v: number): string {

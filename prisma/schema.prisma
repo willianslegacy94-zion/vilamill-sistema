@@ -130,6 +130,7 @@ enum FormaPagamento {
   DEBITO
   PIX
   VOUCHER
+  NOTA
 }
 
 enum UserRole {
