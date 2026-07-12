@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Navbar from "@/components/navbar";
 import Providers from "@/components/session-provider";
+import AvisoExpiracaoHorario from "@/components/aviso-expiracao-horario";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-full flex-col bg-slate-50 font-sans text-slate-900">
         <Providers>
           <Navbar />
+          <AvisoExpiracaoHorario />
           <div className="flex-1 pb-16 md:pb-0">{children}</div>
         </Providers>
       </body>

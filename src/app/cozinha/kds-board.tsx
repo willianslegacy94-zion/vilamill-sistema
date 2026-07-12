@@ -1,6 +1,7 @@
 "use client";
 import useSWR from "swr";
 import { useState } from "react";
+import { fetcher } from "@/lib/fetcher";
 
 type KdsItem = {
   id: string;
@@ -30,8 +31,6 @@ type ApiResponse = {
   mesas: MesaGroup[];
   concluidos: KdsItem[];
 };
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 type Aba = "pendentes" | "concluidos";
 
