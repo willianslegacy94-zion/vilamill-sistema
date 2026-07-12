@@ -4,10 +4,13 @@ import { prisma } from "@/services/prisma";
 // Consumo livre: sem checagem de saldo/caixinha. Acumula para auditoria humana posterior.
 export async function POST(request: NextRequest) {
   try {
-  const { funcionarioId, productId, quantidade, registradoPor } = await request.json();
+  const { funcionarioId, productId, quantidade, registradoPor, valorTotal } = await request.json();
 
   if (!funcionarioId || !productId || !quantidade || !registradoPor) {
     return NextResponse.json({ error: "Campos obrigatórios: funcionarioId, productId, quantidade, registradoPor." }, { status: 400 });
+  }
+  if (valorTotal !== undefined && (typeof valorTotal !== "number" || !(valorTotal > 0))) {
+    return NextResponse.json({ error: "valorTotal deve ser um número maior que zero." }, { status: 400 });
   }
 
   const [produto, funcionario] = await Promise.all([
@@ -17,9 +20,10 @@ export async function POST(request: NextRequest) {
   if (!produto) return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
   if (!funcionario) return NextResponse.json({ error: "Funcionário não encontrado." }, { status: 404 });
 
-  const precoUnit = Number(produto.preco);
   const qtd = Number(quantidade);
-  const subtotal = Number((precoUnit * qtd).toFixed(2));
+  // Permite editar o valor no lançamento (ex: 2 funcionários dividindo uma mesma Coca-Cola)
+  const subtotal = valorTotal !== undefined ? Number(valorTotal.toFixed(2)) : Number((Number(produto.preco) * qtd).toFixed(2));
+  const precoUnit = Number((subtotal / qtd).toFixed(2));
 
   // Registrar consumo e deduzir estoque
   const consumo = await prisma.$transaction(async (tx) => {

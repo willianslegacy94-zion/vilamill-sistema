@@ -21,6 +21,7 @@ export default function EquipeGrid() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [produtoId, setProdutoId] = useState("");
   const [quantidade, setQuantidade] = useState(1);
+  const [valor, setValor] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [toast, setToast] = useState("");
@@ -64,12 +65,21 @@ export default function EquipeGrid() {
 
   const produtoSelecionado = produtos.find((p) => p.id === produtoId) ?? null;
 
+  // Preenche o valor padrão (preço × quantidade) ao trocar produto/quantidade — o operador
+  // pode editar antes de registrar (ex: 2 funcionários dividindo uma mesma Coca-Cola)
+  useEffect(() => {
+    if (produtoSelecionado) {
+      setValor((Number(produtoSelecionado.preco) * quantidade).toFixed(2));
+    }
+  }, [produtoSelecionado, quantidade]);
+
   function abrirModal(id: string) {
     setPessoaId(id);
     setBusca("");
     setCategoriaAtiva(null);
     setProdutoId("");
     setQuantidade(1);
+    setValor("");
     setErro("");
   }
 
@@ -79,6 +89,8 @@ export default function EquipeGrid() {
 
   async function registrarConsumo() {
     if (!pessoaId || !produtoId) return;
+    const valorTotal = Number(valor.replace(",", "."));
+    if (!(valorTotal > 0)) { setErro("Informe um valor válido."); return; }
     setSalvando(true);
     setErro("");
     try {
@@ -90,6 +102,7 @@ export default function EquipeGrid() {
           productId: produtoId,
           quantidade,
           registradoPor,
+          valorTotal,
         }),
       });
       const data = await res.json();
@@ -97,6 +110,7 @@ export default function EquipeGrid() {
       setToast(`${quantidade}× ${produtoSelecionado?.nome} registrado para ${pessoaSelecionada?.nome}.`);
       setProdutoId("");
       setQuantidade(1);
+      setValor("");
       setBusca("");
       setCategoriaAtiva(null);
     } catch {
@@ -224,10 +238,21 @@ export default function EquipeGrid() {
                         onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
                         className="w-16 rounded-lg border border-slate-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
                       />
+                      <label className="text-xs text-slate-500 shrink-0">Valor</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={valor}
+                        onChange={(e) => setValor(e.target.value)}
+                        title="Edite se o valor for dividido com outra pessoa"
+                        className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      />
+                    </div>
+                    <div className="px-3 pb-2.5">
                       <button
                         onClick={registrarConsumo}
                         disabled={salvando || !produtoId}
-                        className="flex-1 rounded-lg bg-[#CC1111] py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#aa0e0e] disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                        className="w-full rounded-lg bg-[#CC1111] py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#aa0e0e] disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
                       >
                         {salvando ? "Registrando..." : "Registrar Consumo"}
                       </button>
