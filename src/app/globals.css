@@ -10,6 +10,13 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Aumenta a fonte do sistema em ~12% (não afeta o cupom impresso, que usa @media print) */
+@media screen {
+  html {
+    font-size: 112.5%;
+  }
+}
+
 /* ── Impressão thermal 80mm ────────────────────────────────────────── */
 @page {
   size: 80mm auto;
