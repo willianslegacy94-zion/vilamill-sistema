@@ -9,6 +9,7 @@ type KdsItem = {
   observacoes: string | null;
   prontoEm: string | null;
   createdAt: string;
+  quantidade: string;
   product: { nome: string; categoria: string };
   order: { createdAt: string; table: { numero: number } };
 };
@@ -23,6 +24,7 @@ type MesaGroup = {
     observacoes: string | null;
     prontoEm: string | null;
     createdAt: string;
+    quantidade: string;
     product: { nome: string; categoria: string };
   }[];
 };
@@ -70,7 +72,11 @@ export default function KdsBoard() {
   const mesas      = data?.mesas      ?? [];
   const concluidos = data?.concluidos ?? [];
   const totalPendentes = mesas.reduce(
-    (acc, m) => acc + m.items.filter((i) => i.status === "PENDENTE").length,
+    (acc, m) =>
+      acc +
+      m.items
+        .filter((i) => i.status === "PENDENTE")
+        .reduce((sum, i) => sum + Number(i.quantidade), 0),
     0
   );
 
@@ -167,7 +173,9 @@ export default function KdsBoard() {
                         <MesaBadge numero={mesa.mesa} />
                         <div className="text-right">
                           <span className="block text-xs font-semibold text-zinc-400">{tempoDecorrido(maisAntigo)}</span>
-                          <span className="block text-xs text-zinc-600">{itensPendentes.length} a fazer</span>
+                          <span className="block text-xs text-zinc-600">
+                            {itensPendentes.reduce((sum, i) => sum + Number(i.quantidade), 0)} a fazer
+                          </span>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -187,6 +195,7 @@ export default function KdsBoard() {
                                     feito ? "text-base font-bold text-zinc-600 line-through" : "text-lg font-black text-white"
                                   }`}
                                 >
+                                  {Number(item.quantidade) > 1 ? `${Number(item.quantidade)}x ` : ""}
                                   {item.product.nome}
                                 </p>
                                 {!feito && (
@@ -238,7 +247,10 @@ export default function KdsBoard() {
                 >
                   <MesaBadge numero={item.order.table.numero} muted />
                   <div className="flex-1 min-w-0">
-                    <p className="break-words text-sm font-bold text-zinc-400">{item.product.nome}</p>
+                    <p className="break-words text-sm font-bold text-zinc-400">
+                      {Number(item.quantidade) > 1 ? `${Number(item.quantidade)}x ` : ""}
+                      {item.product.nome}
+                    </p>
                     {item.observacoes && (
                       <p className="break-words text-xs text-zinc-600">{item.observacoes}</p>
                     )}
