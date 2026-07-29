@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Home, LayoutGrid, BookOpen, Package, TrendingUp, Receipt, LogOut } from "lucide-react";
+import { Home, LayoutGrid, BookOpen, Package, TrendingUp, Receipt, ChefHat, LogOut } from "lucide-react";
 import NotificationsBell from "@/components/notifications-bell";
 
 const allLinks = [
@@ -14,6 +14,7 @@ const allLinks = [
   { href: "/estoque",    label: "Estoque",    icon: Package,     roles: ["ADMIN", "CAIXA"] },
   { href: "/despesas",   label: "Despesas",   icon: Receipt,     roles: ["ADMIN"] },
   { href: "/financeiro", label: "Financeiro", icon: TrendingUp,  roles: ["ADMIN"] },
+  { href: "/cozinha",    label: "Cozinha",    icon: ChefHat,     roles: ["ADMIN"] },
 ];
 
 function isActive(href: string, pathname: string) {

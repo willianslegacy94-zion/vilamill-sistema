@@ -13,6 +13,7 @@ const modules = [
   { href: "/financeiro", title: "Financeiro",  desc: "Relatório diário de vendas por forma de pagamento e ticket médio.", color: "bg-blue-600",   symbol: "📊", adminOnly: true },
   { href: "/parceiros",  title: "Parceiros",   desc: "Gerencie saldos, histórico e liquidação dos funcionários externos.", color: "bg-slate-700", symbol: "👥", adminOnly: true },
   { href: "/admin/caixas", title: "Caixas",   desc: "Gerencie os nomes dos caixas disponíveis para abertura de mesa.", color: "bg-teal-600", symbol: "👤", adminOnly: true },
+  { href: "/cozinha",    title: "Cozinha",    desc: "Acompanhe em tempo real os pedidos pendentes e concluídos na cozinha.", color: "bg-zinc-800", symbol: "🍳", adminOnly: true },
 ];
 
 export default async function Home() {
