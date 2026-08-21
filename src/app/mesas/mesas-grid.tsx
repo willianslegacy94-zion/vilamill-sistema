@@ -36,7 +36,7 @@ type MesaComPedido = {
 };
 
 type FormaPagamento = "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" | "VOUCHER" | "NOTA";
-type PagamentoSplit = { forma: FormaPagamento; valor: string };
+type PagamentoSplit = { forma: FormaPagamento | ""; valor: string };
 
 const STATUS = {
   LIVRE:   { label: "Livre",   bg: "bg-green-50", border: "border-green-300", badge: "bg-green-100 text-green-800" },
@@ -86,7 +86,7 @@ export default function MesasGrid() {
   const [preparo, setPreparo] = useState("Empanado");
   const [observacaoLivre, setObservacaoLivre] = useState("");
   const [carregando, setCarregando] = useState(false);
-  const [pagamentos, setPagamentos] = useState<PagamentoSplit[]>([{ forma: "DINHEIRO", valor: "" }]);
+  const [pagamentos, setPagamentos] = useState<PagamentoSplit[]>([{ forma: "", valor: "" }]);
   const [desconto, setDesconto] = useState(0);
   const [descontoInput, setDescontoInput] = useState(0);
   const [showDescontoModal, setShowDescontoModal] = useState(false);
@@ -115,11 +115,20 @@ export default function MesasGrid() {
   const statusConfig = STATUS[(mesaEfetiva?.status as keyof typeof STATUS) ?? "LIVRE"];
 
   const totalComDesconto = Math.max(0, Number(pedidoAtivo?.total ?? 0) - desconto);
-  const totalPago = pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+  // Com pagamento único (não dividido), o valor é sempre o total da conta —
+  // só fica editável quando a pessoa opta por dividir em mais de uma forma.
+  const isSplit = pagamentos.length > 1;
+  const pagamentosEfetivos: PagamentoSplit[] =
+    pagamentos.length === 1
+      ? [{ forma: pagamentos[0].forma, valor: totalComDesconto > 0 ? totalComDesconto.toFixed(2) : "" }]
+      : pagamentos;
+  const totalPago = pagamentosEfetivos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   const restante = Math.round((totalComDesconto - totalPago) * 100) / 100;
+  const formasValidas = pagamentosEfetivos.every((p) => Number(p.valor) <= 0 || p.forma !== "");
   const podeFechar =
     (pedidoAtivo?.items.length ?? 0) > 0 &&
-    (totalComDesconto === 0 || Math.abs(restante) < 0.01);
+    (totalComDesconto === 0 || Math.abs(restante) < 0.01) &&
+    formasValidas;
 
   // Snapshot do pedido atual — alimenta o print-area enquanto o modal está aberto
   const cupomAtual: DadosCupom | null =
@@ -135,9 +144,9 @@ export default function MesasGrid() {
           subtotal: Number(pedidoAtivo.total),
           desconto,
           total: totalComDesconto,
-          pagamentos: pagamentos
-            .filter((p) => Number(p.valor) > 0)
-            .map((p) => ({ forma: p.forma, valor: Number(p.valor) })),
+          pagamentos: pagamentosEfetivos
+            .filter((p) => Number(p.valor) > 0 && p.forma !== "")
+            .map((p) => ({ forma: p.forma as FormaPagamento, valor: Number(p.valor) })),
           atendente: pedidoAtivo.caixaNome || nomeUsuario,
           fechadoEm: new Date(),
         }
@@ -150,7 +159,7 @@ export default function MesasGrid() {
     setSenhaAdmin("");
     setSenhaError("");
     setShowDescontoModal(false);
-    setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
+    setPagamentos([{ forma: "", valor: "" }]);
     setCaixaNome("");
     setShowCupomConfirmModal(false);
     setCupomJaOfertado(false);
@@ -228,7 +237,7 @@ export default function MesasGrid() {
   function fecharModal() {
     setMesaIdSelecionada(null);
     setDesconto(0);
-    setPagamentos([{ forma: "DINHEIRO", valor: "" }]);
+    setPagamentos([{ forma: "", valor: "" }]);
     setCaixaNome("");
   }
 
@@ -237,11 +246,15 @@ export default function MesasGrid() {
   }
 
   function adicionarPagamento() {
-    const falta = Math.max(0, restante);
-    setPagamentos((prev) => [
-      ...prev,
-      { forma: "DINHEIRO", valor: falta > 0 ? falta.toFixed(2) : "" },
-    ]);
+    setPagamentos((prev) => {
+      // Ao dividir, materializa o valor automático da 1ª linha (até então
+      // só existia em pagamentosEfetivos) para não perder o total já calculado.
+      const base =
+        prev.length === 1
+          ? [{ ...prev[0], valor: totalComDesconto > 0 ? totalComDesconto.toFixed(2) : "" }]
+          : prev;
+      return [...base, { forma: "", valor: "" }];
+    });
   }
 
   function removerPagamento(i: number) {
@@ -249,9 +262,9 @@ export default function MesasGrid() {
   }
 
   function buildPagamentosPayload() {
-    return pagamentos
-      .filter((p) => Number(p.valor) > 0)
-      .map((p) => ({ forma: p.forma, valor: Number(p.valor) }));
+    return pagamentosEfetivos
+      .filter((p) => Number(p.valor) > 0 && p.forma !== "")
+      .map((p) => ({ forma: p.forma as FormaPagamento, valor: Number(p.valor) }));
   }
 
   // ── Helpers de simulação (modo treinamento) ──────────────────────────────
@@ -393,7 +406,7 @@ export default function MesasGrid() {
       const res = await fetch(`/api/pedidos/${pedidoAtivo.id}/fechar-e-liberar`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma, valor: 0 }], desconto }),
+        body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma || "DINHEIRO", valor: 0 }], desconto }),
       });
       if (!res.ok) throw new Error();
       mutate();
@@ -422,7 +435,7 @@ export default function MesasGrid() {
       fetch(`/api/pedidos/${pedidoAtivo.id}/fechar-e-liberar`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma, valor: 0 }], desconto }),
+        body: JSON.stringify({ pagamentos: pags.length ? pags : [{ forma: pagamentos[0].forma || "DINHEIRO", valor: 0 }], desconto }),
       })
     ).then(fecharModal);
   }
@@ -932,13 +945,14 @@ export default function MesasGrid() {
                   <div className="space-y-2 rounded-lg border border-slate-200 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pagamento</p>
 
-                    {pagamentos.map((pag, i) => (
+                    {pagamentosEfetivos.map((pag, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <select
                           value={pag.forma}
                           onChange={(e) => atualizarPagamento(i, "forma", e.target.value)}
                           className="rounded-md border border-slate-300 bg-white px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
                         >
+                          <option value="" disabled>Selecione</option>
                           {PAGAMENTOS.map(({ valor, label }) => (
                             <option key={valor} value={valor}>{label}</option>
                           ))}
@@ -950,12 +964,15 @@ export default function MesasGrid() {
                             min={0}
                             step={0.01}
                             value={pag.valor}
-                            onChange={(e) => atualizarPagamento(i, "valor", e.target.value)}
-                            className="w-full rounded-md border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                            readOnly={!isSplit}
+                            onChange={(e) => isSplit && atualizarPagamento(i, "valor", e.target.value)}
+                            className={`w-full rounded-md border border-slate-300 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 ${
+                              !isSplit ? "bg-slate-50 text-slate-500" : ""
+                            }`}
                             placeholder="0,00"
                           />
                         </div>
-                        {pagamentos.length > 1 && (
+                        {isSplit && (
                           <button
                             onClick={() => removerPagamento(i)}
                             className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
@@ -976,8 +993,16 @@ export default function MesasGrid() {
                       <span>{restante.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                     </div>
 
-                    {/* Botão adicionar forma */}
-                    {restante > 0.005 && (
+                    {/* Botão dividir / adicionar forma */}
+                    {!isSplit && (
+                      <button
+                        onClick={adicionarPagamento}
+                        className="w-full rounded-md border border-dashed border-slate-300 py-2 text-sm text-slate-500 hover:border-slate-500 hover:text-slate-700 transition-colors"
+                      >
+                        Dividir pagamento
+                      </button>
+                    )}
+                    {isSplit && restante > 0.005 && (
                       <button
                         onClick={adicionarPagamento}
                         className="w-full rounded-md border border-dashed border-slate-300 py-2 text-sm text-slate-500 hover:border-slate-500 hover:text-slate-700 transition-colors"
