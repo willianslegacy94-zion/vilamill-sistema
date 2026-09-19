@@ -4,8 +4,10 @@ export async function fetcher(url: string) {
   if (r.status === 403) {
     const body = await r.json().catch(() => null)
     if (body?.outOfHours) {
-      window.location.href = "/bloqueio-horario"
-      return new Promise(() => {}) // navegação assume o controle, nunca resolve
+      if (window.location.pathname !== "/bloqueio-horario") {
+        window.location.href = "/bloqueio-horario"
+      }
+      return new Promise(() => {}) // navegação assume o controle (ou já estamos lá), nunca resolve
     }
   }
 

@@ -29,6 +29,11 @@ export default function Navbar() {
   const isTrainee = (session?.user as any)?.isTrainee ?? false;
   const links = allLinks.filter((l) => isTrainee || l.roles.includes(role));
 
+  // Tela de bloqueio por horário é auto-suficiente (tem seu próprio botão "Sair") — a navbar
+  // completa aqui só confundiria (links para telas que o usuário não pode acessar agora) e o
+  // sino de notificações ficaria pollando uma API que sempre retorna 403 fora do expediente
+  if (pathname === "/bloqueio-horario") return null;
+
   return (
     <>
       {/* Banner de treinamento */}
