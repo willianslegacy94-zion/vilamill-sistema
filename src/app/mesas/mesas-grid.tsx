@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMesas } from "@/hooks/useAppData";
 import CupomImpressao, { DadosCupom } from "@/components/cupom-impressao";
@@ -921,13 +922,31 @@ export default function MesasGrid() {
                         {/* Linha quantidade + botão */}
                         <div className="flex items-center gap-2 px-3 py-2.5 border-t border-slate-100">
                           <label className="text-xs text-slate-500 shrink-0">Qtd.</label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={quantidade}
-                            onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
-                            className="w-16 rounded-lg border border-slate-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
-                          />
+                          <div className="flex items-center rounded-lg border border-slate-300 overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => setQuantidade((q) => Math.max(1, q - 1))}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95"
+                              aria-label="Diminuir quantidade"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              value={quantidade}
+                              onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
+                              className="w-12 border-x border-slate-300 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setQuantidade((q) => q + 1)}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95"
+                              aria-label="Aumentar quantidade"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
                           <button
                             onClick={adicionarItem}
                             disabled={carregando || !produtoId || !opcionaisObrigatoriosSatisfeitos}

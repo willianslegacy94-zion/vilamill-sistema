@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Funcionario = { id: string; nome: string; empresa: string; saldo: number };
@@ -198,13 +199,31 @@ export default function BaixaFuncionarioModal({ onClose, emailOperador }: Props)
 
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-slate-600">Quantidade</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={quantidade}
-                      onChange={(e) => { setQuantidade(Math.max(1, Number(e.target.value))); setErroConsumo(""); setSucessoConsumo(""); }}
-                      className="w-24 rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
-                    />
+                    <div className="flex w-fit items-center rounded-lg border border-slate-300 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => { setQuantidade((q) => Math.max(1, q - 1)); setErroConsumo(""); setSucessoConsumo(""); }}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95"
+                        aria-label="Diminuir quantidade"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        value={quantidade}
+                        onChange={(e) => { setQuantidade(Math.max(1, Number(e.target.value))); setErroConsumo(""); setSucessoConsumo(""); }}
+                        className="w-16 border-x border-slate-300 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setQuantidade((q) => q + 1); setErroConsumo(""); setSucessoConsumo(""); }}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95"
+                        aria-label="Aumentar quantidade"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {subtotal > 0 && (
