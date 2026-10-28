@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/services/prisma"
+import { sistemaSuspenso } from "@/lib/suspensao"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -12,6 +13,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         senha:   { label: "Senha",   type: "password" },
       },
       async authorize(credentials) {
+        if (sistemaSuspenso()) return null
+
         const usuario = credentials?.usuario as string | undefined
         const senha   = credentials?.senha   as string | undefined
         if (!usuario || !senha) return null

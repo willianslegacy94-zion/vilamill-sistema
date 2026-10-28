@@ -1,8 +1,18 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import { acessoPermitido } from "@/lib/horario-acesso"
+import { respostaSuspenso, sistemaSuspenso } from "@/lib/suspensao"
+
+// Rotas que não passam pela checagem de sessão (antes ficavam fora do matcher; agora o
+// matcher cobre tudo pra suspensão alcançá-las).
+const ROTAS_PUBLICAS = /^\/(login|api\/auth|favicon\.ico|logo\.png)(\/|$)/
 
 export default auth((req) => {
+  // Sistema suspenso: 404 genérico em qualquer URL, nem quem tinha sessão passa.
+  if (sistemaSuspenso()) return respostaSuspenso()
+
+  if (ROTAS_PUBLICAS.test(req.nextUrl.pathname)) return NextResponse.next()
+
   if (!req.auth) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
@@ -59,5 +69,9 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ["/((?!login|api/auth|_next/static|_next/image|favicon\\.ico|logo\\.png).*)"],
+  // Runtime Node: no Edge o Next embute no bundle os valores do `.env` presentes no build,
+  // e o SISTEMA_SUSPENSO não mudaria só recriando o container.
+  runtime: "nodejs",
+  // Tudo menos os assets do build — rotas públicas são liberadas pelo ROTAS_PUBLICAS acima.
+  matcher: ["/((?!_next/static|_next/image).*)"],
 }
